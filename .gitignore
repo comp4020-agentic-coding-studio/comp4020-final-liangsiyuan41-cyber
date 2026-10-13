@@ -2,6 +2,10 @@ node_modules/
 dist/
 *.log
 
+# local dev database (the deployed app writes to /data instead, which is
+# the Fly volume; see fly.toml)
+/data/
+
 # editor and OS junk
 .DS_Store
 ._*

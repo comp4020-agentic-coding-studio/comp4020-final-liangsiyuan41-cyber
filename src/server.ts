@@ -57,7 +57,8 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
   }
 
   if (pathname === "/api/posts" && req.method === "GET") {
-    listPosts(req, res);
+    const session = resolveSession(req, res);
+    listPosts(req, res, session);
     return;
   }
 

@@ -7,9 +7,73 @@
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
-    <main>
+    <header>
       <h1>ANU TaskMate</h1>
-      <p>Backend foundation under construction.</p>
+      <p class="tagline">
+        Post a paid or free opportunity, or apply to one someone else posted.
+        <a href="/readme/">What this app is for</a>
+      </p>
+    </header>
+
+    <main>
+      <section class="panel">
+        <h2>Post an opportunity</h2>
+        <form id="post-form">
+          <label>
+            Your name
+            <input type="text" name="authorName" maxlength="80" required />
+          </label>
+
+          <label>
+            Category
+            <select name="category" required>
+              <option value="campus_help">Campus Help</option>
+              <option value="study_together">Study Together</option>
+              <option value="social_connect">Social Connect</option>
+              <option value="campus_events">Campus Events</option>
+            </select>
+          </label>
+
+          <label>
+            Title
+            <input type="text" name="title" maxlength="120" required />
+          </label>
+
+          <label>
+            Description
+            <textarea name="description" maxlength="2000" rows="3" required></textarea>
+          </label>
+
+          <fieldset class="paid-toggle">
+            <legend>Is this paid?</legend>
+            <label><input type="radio" name="isPaid" value="free" checked /> Free</label>
+            <label><input type="radio" name="isPaid" value="paid" /> Paid</label>
+            <label class="amount-field" hidden>
+              Amount
+              <input type="text" name="amount" maxlength="40" placeholder="e.g. $20" />
+            </label>
+          </fieldset>
+
+          <button type="submit">Post</button>
+          <p class="form-status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>Community feed</h2>
+        <div class="tabs" role="tablist" aria-label="Filter by category">
+          <button type="button" class="tab active" data-category="all">All</button>
+          <button type="button" class="tab" data-category="campus_help">Campus Help</button>
+          <button type="button" class="tab" data-category="study_together">Study Together</button>
+          <button type="button" class="tab" data-category="social_connect">Social Connect</button>
+          <button type="button" class="tab" data-category="campus_events">Campus Events</button>
+        </div>
+        <p class="live-indicator" aria-live="polite"></p>
+        <ul id="feed" class="feed"></ul>
+        <p id="feed-empty" class="feed-empty" hidden>No posts in this category yet — be the first.</p>
+      </section>
     </main>
+
+    <script src="/app.js"></script>
   </body>
 </html>

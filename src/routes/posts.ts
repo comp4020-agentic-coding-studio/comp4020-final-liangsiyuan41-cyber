@@ -19,7 +19,9 @@ interface PostRow {
 }
 
 const listPostsStmt = db.prepare(`
-  SELECT p.*, COUNT(a.id) AS application_count
+  SELECT p.*,
+    COUNT(a.id) AS application_count,
+    MAX(CASE WHEN a.applicant_session_id = ? THEN 1 ELSE 0 END) AS applied_by_me
   FROM posts p
   LEFT JOIN applications a ON a.post_id = p.id
   GROUP BY p.id
@@ -33,7 +35,10 @@ const insertPostStmt = db.prepare(`
 
 const getPostStmt = db.prepare("SELECT * FROM posts WHERE id = ?");
 
-function serialisePost(row: PostRow & { application_count: number }) {
+function serialisePost(
+  row: PostRow & { application_count: number; applied_by_me?: number },
+  sessionId: string,
+) {
   return {
     id: row.id,
     authorName: row.author_name,
@@ -44,13 +49,18 @@ function serialisePost(row: PostRow & { application_count: number }) {
     amount: row.amount,
     createdAt: row.created_at,
     applicationCount: row.application_count,
+    isOwnPost: row.author_session_id === sessionId,
+    appliedByMe: Boolean(row.applied_by_me),
   };
 }
 
-export function listPosts(_req: IncomingMessage, res: ServerResponse): void {
-  const rows = listPostsStmt.all() as unknown as (PostRow & { application_count: number })[];
+export function listPosts(_req: IncomingMessage, res: ServerResponse, session: Session): void {
+  const rows = listPostsStmt.all(session.id) as unknown as (PostRow & {
+    application_count: number;
+    applied_by_me: number;
+  })[];
   res.writeHead(200, { "Content-Type": "application/json" });
-  res.end(JSON.stringify(rows.map(serialisePost)));
+  res.end(JSON.stringify(rows.map((row) => serialisePost(row, session.id))));
 }
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
@@ -92,10 +102,14 @@ export async function createPost(req: IncomingMessage, res: ServerResponse, sess
 
   const result = insertPostStmt.run(session.id, authorName, category, title, description, isPaid ? 1 : 0, amount);
   const row = getPostStmt.get(result.lastInsertRowid) as unknown as PostRow;
-  const post = serialisePost({ ...row, application_count: 0 });
+  const post = serialisePost({ ...row, application_count: 0 }, session.id);
 
   res.writeHead(201, { "Content-Type": "application/json" });
   res.end(JSON.stringify(post));
 
-  broadcast("post:created", post);
+  // Only a signal, not the post itself: isOwnPost/appliedByMe above are
+  // true relative to the poster's session and would be wrong for every
+  // other open tab. Other clients re-fetch GET /api/posts, which is
+  // authoritative per-viewer (see docs/adr-0001-concurrent-applications.md).
+  broadcast("post:created", { id: post.id });
 }

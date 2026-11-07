@@ -9,6 +9,8 @@ const STATUS_LABELS = {
   pending: "Pending",
   accepted: "Accepted",
   declined: "Declined",
+  completed: "Completed",
+  cancelled: "Cancelled",
 };
 
 const feedEl = document.getElementById("feed");
@@ -34,6 +36,23 @@ function escapeHtml(s) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 }
 
+function renderApplicantActions(post, a) {
+  if (a.status === "pending") {
+    return `
+      <button type="button" class="decide-btn accept" data-post-id="${post.id}" data-application-id="${a.id}" data-status="accepted">Accept</button>
+      <button type="button" class="decide-btn decline" data-post-id="${post.id}" data-application-id="${a.id}" data-status="declined">Decline</button>
+    `;
+  }
+  if (a.status === "accepted") {
+    return `
+      <button type="button" class="decide-btn complete" data-post-id="${post.id}" data-application-id="${a.id}" data-status="completed">Mark Completed</button>
+      <button type="button" class="decide-btn cancel" data-post-id="${post.id}" data-application-id="${a.id}" data-status="cancelled">${a.cancellationRequested ? "Approve Cancellation" : "Cancel"}</button>
+    `;
+  }
+  // completed and cancelled are terminal — nothing left to do with this row.
+  return "";
+}
+
 function renderApplicantPanel(post) {
   if (!post.isOwnPost) return "";
 
@@ -53,12 +72,18 @@ function renderApplicantPanel(post) {
             .map(
               (a) => `
             <li class="applicant-row" data-application-id="${a.id}">
-              <span class="applicant-name">${escapeHtml(a.applicantName)}</span>
-              <span class="status-pill status-${a.status}">${STATUS_LABELS[a.status] ?? a.status}</span>
-              <span class="applicant-actions">
-                <button type="button" class="decide-btn accept" data-post-id="${post.id}" data-application-id="${a.id}" data-status="accepted" ${a.status === "accepted" ? "disabled" : ""}>Accept</button>
-                <button type="button" class="decide-btn decline" data-post-id="${post.id}" data-application-id="${a.id}" data-status="declined" ${a.status === "declined" ? "disabled" : ""}>Decline</button>
-              </span>
+              <div class="applicant-row-main">
+                <span class="applicant-name">${escapeHtml(a.applicantName)}</span>
+                <span class="status-pill status-${a.status}">${STATUS_LABELS[a.status] ?? a.status}</span>
+                <span class="applicant-actions">
+                  ${renderApplicantActions(post, a)}
+                </span>
+              </div>
+              ${
+                a.cancellationRequested
+                  ? `<p class="cancellation-note">Requested cancellation${a.cancellationReason ? `: “${escapeHtml(a.cancellationReason)}”` : ""}</p>`
+                  : ""
+              }
             </li>
           `,
             )
@@ -84,10 +109,16 @@ function renderFeed() {
   feedEl.innerHTML = visible
     .map((post) => {
       const priceLabel = post.isPaid ? `Paid${post.amount ? ` · ${escapeHtml(post.amount)}` : ""}` : "Free";
+      const statusBadge = `<span class="badge applied status-${post.myApplicationStatus}">${STATUS_LABELS[post.myApplicationStatus] ?? "Applied"}</span>`;
+      const requestCancellationBtn = `<button type="button" class="request-cancellation-btn" data-post-id="${post.id}">Request Cancellation</button>`;
       const applyControl = post.isOwnPost
         ? `<span class="badge">Your post</span>`
         : post.appliedByMe
-          ? `<span class="badge applied status-${post.myApplicationStatus}">${STATUS_LABELS[post.myApplicationStatus] ?? "Applied"}</span>`
+          ? post.myApplicationStatus === "accepted"
+            ? post.myCancellationRequested
+              ? `${statusBadge}<span class="badge cancellation-pending">Cancellation requested</span>`
+              : `${statusBadge}${requestCancellationBtn}`
+            : statusBadge
           : `<button type="button" class="apply-btn" data-post-id="${post.id}">Apply</button>`;
 
       return `
@@ -244,6 +275,33 @@ feedEl.addEventListener("click", async (e) => {
   } catch {
     btn.disabled = false;
     btn.textContent = "Apply";
+  }
+});
+
+feedEl.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".request-cancellation-btn");
+  if (!btn) return;
+
+  const reason = prompt("Optional: let the post author know why (visible only to them).") ?? "";
+
+  btn.disabled = true;
+  btn.textContent = "Requesting…";
+
+  try {
+    const res = await fetch(`/api/posts/${btn.dataset.postId}/cancellation-request`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason }),
+    });
+    if (res.ok) {
+      await loadPosts();
+    } else {
+      btn.disabled = false;
+      btn.textContent = "Request Cancellation";
+    }
+  } catch {
+    btn.disabled = false;
+    btn.textContent = "Request Cancellation";
   }
 });
 

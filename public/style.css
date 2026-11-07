@@ -269,6 +269,16 @@ button[type="submit"]:hover,
   color: #a33a3a;
 }
 
+.status-completed {
+  background: #e3edfb;
+  color: var(--blue);
+}
+
+.status-cancelled {
+  background: #f1f1f1;
+  color: #666;
+}
+
 .badge.status-accepted {
   background: #e7f5e9;
   color: #2a6b2a;
@@ -277,6 +287,42 @@ button[type="submit"]:hover,
 .badge.status-declined {
   background: #fbe7e7;
   color: #a33a3a;
+}
+
+.badge.status-completed {
+  background: #e3edfb;
+  color: var(--blue);
+}
+
+.badge.status-cancelled {
+  background: #f1f1f1;
+  color: #666;
+}
+
+.badge.cancellation-pending {
+  background: #fdf1dc;
+  color: var(--gold);
+}
+
+.request-cancellation-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  padding: 0.3rem 0.6rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #a33a3a;
+  cursor: pointer;
+}
+
+.request-cancellation-btn:hover:not(:disabled) {
+  background: #fbe7e7;
+}
+
+.request-cancellation-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .applicant-panel {
@@ -322,14 +368,24 @@ button[type="submit"]:hover,
 }
 
 .applicant-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
   border: 1px solid var(--border);
   border-radius: 0.35rem;
   padding: 0.5rem 0.65rem;
   font-size: 0.85rem;
+}
+
+.applicant-row-main {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cancellation-note {
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+  color: var(--gold);
+  font-style: italic;
 }
 
 .applicant-name {
@@ -372,13 +428,31 @@ button[type="submit"]:hover,
   background: #fbe7e7;
 }
 
+.decide-btn.complete {
+  color: var(--blue);
+  border-color: #b9c9e6;
+}
+
+.decide-btn.complete:hover:not(:disabled) {
+  background: #e3edfb;
+}
+
+.decide-btn.cancel {
+  color: #a33a3a;
+  border-color: #f0c3c3;
+}
+
+.decide-btn.cancel:hover:not(:disabled) {
+  background: #fbe7e7;
+}
+
 .decide-btn:disabled {
   opacity: 0.5;
   cursor: default;
 }
 
 @media (max-width: 480px) {
-  .applicant-row {
+  .applicant-row-main {
     flex-direction: column;
     align-items: stretch;
   }

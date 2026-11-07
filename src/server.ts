@@ -17,6 +17,21 @@ const STATIC_TYPES: Record<string, string> = {
   ".css": "text/css; charset=utf-8",
 };
 
+// Real, independently navigable routes for the four community pages — each
+// one is a server-returned HTML document, not a client-side route, so a
+// direct open, a refresh, and the browser's own back/forward all work the
+// same way they do for any traditional multi-page site, with no router to
+// get wrong. The slug in the URL is a presentation detail only; it's mapped
+// to the file here and nowhere else (the category values posts are actually
+// stored and filtered under remain exactly what src/routes/posts.ts already
+// uses — see public/app.js's per-page data-category attribute).
+const COMMUNITY_PAGES: Record<string, string> = {
+  "/community/campus-help": "/community/campus-help.html",
+  "/community/study-together": "/community/study-together.html",
+  "/community/social-connect": "/community/social-connect.html",
+  "/community/campus-events": "/community/campus-events.html",
+};
+
 async function serveStatic(path: string, res: ServerResponse): Promise<boolean> {
   try {
     const data = await readFile(`public${path}`);
@@ -98,6 +113,12 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
 
   if (pathname === "/" && req.method === "GET") {
     await serveStatic("/index.html", res);
+    return;
+  }
+
+  const communityFile = COMMUNITY_PAGES[pathname];
+  if (communityFile && req.method === "GET") {
+    await serveStatic(communityFile, res);
     return;
   }
 

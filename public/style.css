@@ -1,9 +1,13 @@
 :root {
   color-scheme: light;
-  --blue: #00338d;
+  --blue: #123a76;
+  --blue-dark: #0c2a57;
+  --blue-tint: #eef2fb;
   --gold: #be830e;
   --border: #d8dce0;
-  --bg: #f7f8fa;
+  --bg: #f4f6fa;
+  --text: #1a1a1a;
+  --text-muted: #555;
 }
 
 * {
@@ -11,25 +15,225 @@
 }
 
 body {
-  font-family: system-ui, sans-serif;
-  max-width: 48rem;
-  margin: 0 auto;
-  padding: 1.5rem;
+  font-family:
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  margin: 0;
+  padding: 0;
   background: var(--bg);
-  color: #1a1a1a;
+  color: var(--text);
+  line-height: 1.5;
 }
 
-header h1 {
-  margin-bottom: 0.25rem;
+a {
+  color: inherit;
+}
+
+.page-section {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* Site navigation, shared across every page */
+.site-header {
+  background: white;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.site-nav {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 0.9rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.brand {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--blue);
+  text-decoration: none;
+  letter-spacing: 0.01em;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-link {
+  display: inline-block;
+  padding: 0.45rem 0.85rem;
+  border-radius: 0.4rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.nav-link:hover {
+  background: var(--blue-tint);
   color: var(--blue);
 }
 
-.tagline {
-  color: #555;
-  margin-top: 0;
+.nav-link.nav-cta {
+  background: var(--blue);
+  color: white;
+}
+
+.nav-link.nav-cta:hover {
+  background: var(--blue-dark);
+  color: white;
+}
+
+.nav-link.nav-disabled {
+  color: #aaa;
+  cursor: not-allowed;
+}
+
+.nav-link.nav-disabled:hover {
+  background: none;
+  color: #aaa;
+}
+
+/* Hero */
+.hero {
+  background: linear-gradient(135deg, var(--blue-tint), #ffffff);
+  border-bottom: 1px solid var(--border);
+  padding: 3.5rem 1.5rem;
+  text-align: center;
+}
+
+.hero h1 {
+  margin: 0 0 0.75rem;
+  color: var(--blue);
+  font-size: clamp(1.75rem, 4vw, 2.6rem);
+}
+
+.hero p {
+  margin: 0 auto;
+  max-width: 38rem;
+  color: var(--text-muted);
+  font-size: 1.05rem;
+}
+
+/* Community cards */
+.communities {
+  padding: 2.5rem 1.5rem;
+}
+
+.communities h2 {
+  text-align: center;
+  color: var(--blue);
+  margin: 0 0 1.5rem;
+}
+
+.community-grid {
+  max-width: 64rem;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+}
+
+.community-card {
+  display: block;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 1px 2px rgba(18, 58, 118, 0.05);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.community-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(18, 58, 118, 0.12);
+  border-color: var(--blue);
+}
+
+.community-card-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.75rem;
+  background: var(--blue-tint);
+  color: var(--blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.community-card-icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.community-card h3 {
+  margin: 0 0 0.4rem;
+  color: var(--blue);
+}
+
+.community-card p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+/* Individual community page header */
+.community-hero {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 1.5rem;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--blue);
+  text-decoration: none;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+.community-hero h1 {
+  margin: 0 0 0.5rem;
+  color: var(--blue);
+}
+
+.community-hero p {
+  margin: 0 0 1.25rem;
+  color: var(--text-muted);
+  max-width: 42rem;
 }
 
 main {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 0 1.5rem 2.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -38,12 +242,14 @@ main {
 .panel {
   background: white;
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  padding: 1.25rem;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 2px rgba(18, 58, 118, 0.04);
 }
 
 .panel h2 {
   margin-top: 0;
+  color: var(--blue);
 }
 
 #post-form {
@@ -105,17 +311,18 @@ button[type="submit"],
   background: var(--blue);
   color: white;
   border: none;
-  border-radius: 0.25rem;
-  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  padding: 0.6rem 1.25rem;
   font: inherit;
   font-weight: 600;
   cursor: pointer;
   align-self: flex-start;
+  transition: background 0.15s ease;
 }
 
 button[type="submit"]:hover,
 .apply-btn:hover {
-  opacity: 0.9;
+  background: var(--blue-dark);
 }
 
 .apply-btn:disabled {
@@ -170,8 +377,10 @@ button[type="submit"]:hover,
 
 .post-card {
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  padding: 1rem;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  background: white;
+  box-shadow: 0 1px 2px rgba(18, 58, 118, 0.04);
 }
 
 .post-card-header {
@@ -460,4 +669,36 @@ button[type="submit"]:hover,
   .applicant-actions {
     justify-content: flex-end;
   }
+}
+
+@media (max-width: 640px) {
+  .site-nav {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .nav-links {
+    justify-content: center;
+  }
+
+  .hero {
+    padding: 2.5rem 1.25rem;
+  }
+
+  .communities,
+  .community-hero {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+
+  main {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+}
+
+.readme {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
 }

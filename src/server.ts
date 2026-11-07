@@ -5,7 +5,7 @@ import "./db.ts";
 import { resolveSession } from "./session.ts";
 import { addClient } from "./events.ts";
 import { listPosts, createPost } from "./routes/posts.ts";
-import { applyToPost, listApplicants, setApplicationStatus } from "./routes/applications.ts";
+import { applyToPost, listApplicants, setApplicationStatus, requestCancellation } from "./routes/applications.ts";
 import { whoami } from "./routes/whoami.ts";
 import { renderReadmePage } from "./readme.ts";
 
@@ -86,6 +86,13 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
   if (decisionMatch && req.method === "PATCH") {
     const session = resolveSession(req, res);
     await setApplicationStatus(req, res, session, Number(decisionMatch[1]), Number(decisionMatch[2]));
+    return;
+  }
+
+  const cancellationMatch = pathname.match(/^\/api\/posts\/(\d+)\/cancellation-request$/);
+  if (cancellationMatch && req.method === "POST") {
+    const session = resolveSession(req, res);
+    await requestCancellation(req, res, session, Number(cancellationMatch[1]));
     return;
   }
 

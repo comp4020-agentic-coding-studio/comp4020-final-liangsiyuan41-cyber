@@ -3,7 +3,21 @@ import { db } from "../db.ts";
 import { broadcast } from "../events.ts";
 import { setDisplayName, type Session } from "../session.ts";
 
-export type ApplicationStatus = "pending" | "accepted" | "declined";
+export type ApplicationStatus = "pending" | "accepted" | "declined" | "completed" | "cancelled";
+
+// The only transitions the state machine allows. Both the author's "decline
+// a cancellation request" (there isn't one — see CLAUDE.md's Cancellation
+// requirements) and "edit a completed/cancelled record" are deliberately
+// absent: completed and cancelled are terminal, and nothing transitions back
+// to pending. Enforced here, not just hidden in the UI, so a crafted PATCH
+// can't skip the author's decision.
+const ALLOWED_TRANSITIONS: Record<ApplicationStatus, readonly ApplicationStatus[]> = {
+  pending: ["accepted", "declined"],
+  accepted: ["completed", "cancelled"],
+  declined: [],
+  completed: [],
+  cancelled: [],
+};
 
 const getPostStmt = db.prepare("SELECT id, author_session_id FROM posts WHERE id = ?");
 
@@ -19,7 +33,7 @@ const insertApplicationStmt = db.prepare(`
 const countApplicationsStmt = db.prepare("SELECT COUNT(*) AS n FROM applications WHERE post_id = ?");
 
 const listApplicantsStmt = db.prepare(`
-  SELECT id, applicant_name, status, created_at
+  SELECT id, applicant_name, status, cancellation_requested, cancellation_reason, created_at
   FROM applications
   WHERE post_id = ?
   ORDER BY created_at ASC
@@ -27,9 +41,22 @@ const listApplicantsStmt = db.prepare(`
 
 const getApplicationStmt = db.prepare("SELECT id, post_id, status FROM applications WHERE id = ?");
 
-const updateStatusStmt = db.prepare("UPDATE applications SET status = ? WHERE id = ?");
+const getApplicationByPostAndSessionStmt = db.prepare(
+  "SELECT id, post_id, status FROM applications WHERE post_id = ? AND applicant_session_id = ?",
+);
 
-const STATUSES = ["pending", "accepted", "declined"] as const;
+// Any author decision resolves whatever cancellation request was outstanding
+// — there's nothing left to approve once the application has moved on, so
+// the request flag and reason are cleared alongside the status itself.
+const updateStatusStmt = db.prepare(
+  "UPDATE applications SET status = ?, cancellation_requested = 0, cancellation_reason = NULL WHERE id = ?",
+);
+
+const requestCancellationStmt = db.prepare(
+  "UPDATE applications SET cancellation_requested = 1, cancellation_reason = ? WHERE id = ?",
+);
+
+const ALL_STATUSES: readonly ApplicationStatus[] = ["pending", "accepted", "declined", "completed", "cancelled"];
 
 function isNonEmptyString(v: unknown): v is string {
   return typeof v === "string" && v.trim().length > 0;
@@ -118,6 +145,8 @@ export function listApplicants(res: ServerResponse, session: Session, postId: nu
     id: number;
     applicant_name: string;
     status: ApplicationStatus;
+    cancellation_requested: number;
+    cancellation_reason: string | null;
     created_at: string;
   }[];
 
@@ -128,16 +157,25 @@ export function listApplicants(res: ServerResponse, session: Session, postId: nu
         id: row.id,
         applicantName: row.applicant_name,
         status: row.status,
+        cancellationRequested: Boolean(row.cancellation_requested),
+        // The reason is private to the author and that one applicant — this
+        // endpoint already only returns to the author (see the ownership
+        // check above), so handing it back here doesn't widen who sees it.
+        cancellationReason: row.cancellation_reason,
         createdAt: row.created_at,
       })),
     ),
   );
 }
 
-// Author decisions: accept/decline a single applicant. Accepting one
-// applicant never touches any other applicant's row — there is no "reject
-// everyone else" side effect, matching the C9 decision that applying never
-// closes a post to anyone else (docs/adr-0001-concurrent-applications.md).
+// Author decisions: accept/decline a pending applicant, or mark an accepted
+// one completed/cancelled. Each application is transitioned independently —
+// deciding on one never touches any other applicant's row, matching the C9
+// decision that applying never closes a post to anyone else
+// (docs/adr-0001-concurrent-applications.md). This also covers the author
+// directly cancelling an accepted participant, and the author approving a
+// participant's own cancellation request (same transition, accepted ->
+// cancelled; the request is just what prompted it).
 export async function setApplicationStatus(
   req: IncomingMessage,
   res: ServerResponse,
@@ -176,13 +214,22 @@ export async function setApplicationStatus(
   }
 
   const b = body as Record<string, unknown>;
-  const status = STATUSES.includes(b.status as ApplicationStatus) ? (b.status as ApplicationStatus) : null;
-  if (!status || status === "pending") {
+  const status = ALL_STATUSES.includes(b.status as ApplicationStatus) ? (b.status as ApplicationStatus) : null;
+  if (!status) {
     res.writeHead(400, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ error: "status must be 'accepted' or 'declined'" }));
+    res.end(JSON.stringify({ error: `status must be one of ${ALL_STATUSES.filter((s) => s !== "pending").join(", ")}` }));
     return;
   }
 
+  if (!ALLOWED_TRANSITIONS[application.status].includes(status)) {
+    res.writeHead(400, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: `cannot move an application from '${application.status}' to '${status}'` }));
+    return;
+  }
+
+  // Completing or cancelling always resolves any outstanding cancellation
+  // request on this application — there's nothing left for the author to
+  // approve once the application has reached a terminal state.
   updateStatusStmt.run(status, applicationId);
 
   res.writeHead(200, { "Content-Type": "application/json" });
@@ -191,5 +238,57 @@ export async function setApplicationStatus(
   // Identifier only, same reasoning as application:count: the applicant's
   // own session re-fetches GET /api/posts for its authoritative, per-viewer
   // status rather than trusting a broadcast payload (ADR 0001).
+  broadcast("application:status", { postId });
+}
+
+// The applicant's own request to step back from an acceptance. Scoped by
+// (postId, the caller's own session) rather than an application id — the
+// applicant's browser only ever knows a post id (from the public feed), the
+// same shape as applyToPost above, not the internal application id the
+// author's view uses. This never changes `status` itself — only the post
+// author's decision does that (see setApplicationStatus) — so a request
+// alone can't be mistaken for an already-resolved cancellation, matching
+// CLAUDE.md's requirement to keep a request and a completed cancellation as
+// distinct states.
+export async function requestCancellation(
+  req: IncomingMessage,
+  res: ServerResponse,
+  session: Session,
+  postId: number,
+): Promise<void> {
+  const application = getApplicationByPostAndSessionStmt.get(postId, session.id) as
+    | { id: number; post_id: number; status: ApplicationStatus }
+    | undefined;
+  if (!application) {
+    res.writeHead(404, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "you have no application on this post" }));
+    return;
+  }
+
+  if (application.status !== "accepted") {
+    res.writeHead(400, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "only an accepted application can have cancellation requested" }));
+    return;
+  }
+
+  let body: unknown;
+  try {
+    body = await readJsonBody(req);
+  } catch {
+    res.writeHead(400, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "invalid JSON body" }));
+    return;
+  }
+
+  const b = body as Record<string, unknown>;
+  const reason = isNonEmptyString(b.reason) ? b.reason.trim().slice(0, 500) : null;
+
+  requestCancellationStmt.run(reason, application.id);
+
+  res.writeHead(200, { "Content-Type": "application/json" });
+  res.end(JSON.stringify({ id: application.id, postId, cancellationRequested: true }));
+
+  // Identifier only — the author's open session re-fetches the applicant
+  // list for the authoritative view, same as every other status change here.
   broadcast("application:status", { postId });
 }

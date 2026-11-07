@@ -22,7 +22,8 @@ const listPostsStmt = db.prepare(`
   SELECT p.*,
     COUNT(a.id) AS application_count,
     MAX(CASE WHEN a.applicant_session_id = ? THEN 1 ELSE 0 END) AS applied_by_me,
-    MAX(CASE WHEN a.applicant_session_id = ? THEN a.status ELSE NULL END) AS my_application_status
+    MAX(CASE WHEN a.applicant_session_id = ? THEN a.status ELSE NULL END) AS my_application_status,
+    MAX(CASE WHEN a.applicant_session_id = ? THEN a.cancellation_requested ELSE 0 END) AS my_cancellation_requested
   FROM posts p
   LEFT JOIN applications a ON a.post_id = p.id
   GROUP BY p.id
@@ -37,7 +38,12 @@ const insertPostStmt = db.prepare(`
 const getPostStmt = db.prepare("SELECT * FROM posts WHERE id = ?");
 
 function serialisePost(
-  row: PostRow & { application_count: number; applied_by_me?: number; my_application_status?: string | null },
+  row: PostRow & {
+    application_count: number;
+    applied_by_me?: number;
+    my_application_status?: string | null;
+    my_cancellation_requested?: number;
+  },
   sessionId: string,
 ) {
   return {
@@ -53,14 +59,16 @@ function serialisePost(
     isOwnPost: row.author_session_id === sessionId,
     appliedByMe: Boolean(row.applied_by_me),
     myApplicationStatus: row.my_application_status ?? null,
+    myCancellationRequested: Boolean(row.my_cancellation_requested),
   };
 }
 
 export function listPosts(_req: IncomingMessage, res: ServerResponse, session: Session): void {
-  const rows = listPostsStmt.all(session.id, session.id) as unknown as (PostRow & {
+  const rows = listPostsStmt.all(session.id, session.id, session.id) as unknown as (PostRow & {
     application_count: number;
     applied_by_me: number;
     my_application_status: string | null;
+    my_cancellation_requested: number;
   })[];
   res.writeHead(200, { "Content-Type": "application/json" });
   res.end(JSON.stringify(rows.map((row) => serialisePost(row, session.id))));

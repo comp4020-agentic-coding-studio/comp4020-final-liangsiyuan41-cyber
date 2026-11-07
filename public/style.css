@@ -110,25 +110,36 @@ a {
   color: #aaa;
 }
 
-/* Hero */
+/* Hero: a wide photo banner with a navy overlay so a white heading stays
+   readable regardless of what's underneath. The overlay is a gradient, not a
+   flat tint, so text sits on its darkest band while the photo still reads
+   clearly further down the image. */
 .hero {
-  background: linear-gradient(135deg, var(--blue-tint), #ffffff);
+  position: relative;
   border-bottom: 1px solid var(--border);
-  padding: 3.5rem 1.5rem;
+  padding: 4.5rem 1.5rem;
   text-align: center;
+  color: white;
+  background-image:
+    linear-gradient(180deg, rgba(12, 42, 87, 0.82), rgba(18, 58, 118, 0.6)),
+    url("/images/hero-anu.jpg");
+  background-size: cover;
+  background-position: center;
 }
 
 .hero h1 {
   margin: 0 0 0.75rem;
-  color: var(--blue);
+  color: white;
   font-size: clamp(1.75rem, 4vw, 2.6rem);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 
 .hero p {
   margin: 0 auto;
   max-width: 38rem;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.92);
   font-size: 1.05rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 /* Community cards */
@@ -155,7 +166,10 @@ a {
   background: white;
   border: 1px solid var(--border);
   border-radius: 1rem;
-  padding: 1.5rem;
+  /* The image sits flush with the card edge (its own radius matches the
+     card's top corners below); only the text below it keeps the old inset
+     padding. */
+  overflow: hidden;
   text-decoration: none;
   color: inherit;
   box-shadow: 0 1px 2px rgba(18, 58, 118, 0.05);
@@ -169,6 +183,19 @@ a {
   transform: translateY(-3px);
   box-shadow: 0 10px 24px rgba(18, 58, 118, 0.12);
   border-color: var(--blue);
+}
+
+.community-card-image {
+  display: block;
+  width: 100%;
+  /* Consistent ratio and cropping across all four cards, whatever the
+     source photo's own dimensions are. */
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+}
+
+.community-card-body {
+  padding: 1.5rem;
 }
 
 .community-card-icon {
@@ -701,4 +728,24 @@ button[type="submit"]:hover,
   max-width: 48rem;
   margin: 0 auto;
   padding: 2rem 1.5rem;
+}
+
+.site-footer {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 0 1.5rem 2rem;
+  text-align: center;
+  color: #777;
+  font-size: 0.85rem;
+}
+
+.site-footer p {
+  margin: 0.35rem 0;
+}
+
+.photo-credit {
+  max-width: 42rem;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.5;
 }

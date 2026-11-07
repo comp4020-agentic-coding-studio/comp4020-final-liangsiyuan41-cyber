@@ -31,6 +31,21 @@ a {
   color: inherit;
 }
 
+/* A single, consistent keyboard-focus style across every interactive
+   element (links, buttons, form fields, tabs) rather than relying on each
+   browser's own default outline, which is inconsistent and sometimes near-
+   invisible against this palette. :focus-visible means it only shows for
+   keyboard/assistive-tech focus, not every mouse click. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
 .page-section {
   max-width: 64rem;
   margin: 0 auto;
@@ -359,8 +374,16 @@ button[type="submit"]:hover,
 
 .form-status {
   min-height: 1.2em;
-  color: #2a6b2a;
+  color: var(--text-muted);
   margin: 0;
+}
+
+.form-status.success {
+  color: #2a6b2a;
+}
+
+.form-status.error {
+  color: #a33a3a;
 }
 
 .tabs {
@@ -456,7 +479,8 @@ button[type="submit"]:hover,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
   font-size: 0.85rem;
   color: #555;
 }
@@ -708,6 +732,10 @@ button[type="submit"]:hover,
     justify-content: center;
   }
 
+  .nav-link {
+    padding: 0.55rem 0.85rem;
+  }
+
   .hero {
     padding: 2.5rem 1.25rem;
   }
@@ -721,6 +749,28 @@ button[type="submit"]:hover,
   main {
     padding-left: 1.25rem;
     padding-right: 1.25rem;
+  }
+
+  .panel {
+    padding: 1.25rem;
+  }
+
+  /* Card footer controls (apply/request-cancellation/badges) get more room
+     to tap and wrap cleanly instead of squeezing onto one row. */
+  .post-card-footer {
+    gap: 0.6rem;
+  }
+
+  .apply-btn,
+  .request-cancellation-btn,
+  .applicants-toggle,
+  .decide-btn {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  button[type="submit"] {
+    width: 100%;
   }
 }
 

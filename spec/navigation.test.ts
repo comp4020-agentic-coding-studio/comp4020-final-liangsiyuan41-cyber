@@ -67,10 +67,11 @@ it("serves the homepage with the required nav bar, hero and community cards", as
     { title: "Campus Events", href: "/community/campus-events" },
   ]);
 
-  // The posting form stays functional and in place at this stage (Part 1
-  // restriction); Create Post is an anchor into it, not a new page.
-  expect(doc.getElementById("post-form")).not.toBeNull();
-  expect(doc.getElementById("create-post")).not.toBeNull();
+  // Part 2 moves posting to its own page (/create) and removes the large
+  // form from the homepage, so Explore/discovery is what the homepage keeps
+  // — see spec/create-page.test.ts for the dedicated page's own coverage.
+  expect(doc.getElementById("post-form")).toBeNull();
+  expect(doc.getElementById("create-post")).toBeNull();
 });
 
 it("serves each community route directly as its own page, with the right heading and category scope", async () => {

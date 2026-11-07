@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en-AU">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Create Post — ANU TaskMate</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="site-nav" aria-label="Main navigation">
+        <a href="/" class="brand">ANU TaskMate</a>
+        <ul class="nav-links">
+          <li><a href="/" class="nav-link">Home</a></li>
+          <li><a href="/#communities" class="nav-link">Explore</a></li>
+          <li><a href="/create" class="nav-link nav-cta">Create Post</a></li>
+          <li><a href="/my-activity" class="nav-link">My Activity</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <section class="community-hero">
+      <a href="/#communities" class="back-link">← Back to all communities</a>
+      <h1>Post an opportunity</h1>
+      <p>Ask for a hand, offer one, or share something another student could use — pick a community below.</p>
+    </section>
+
+    <main>
+      <section class="panel">
+        <form id="post-form">
+          <label>
+            Your name
+            <input type="text" name="authorName" maxlength="80" required />
+          </label>
+
+          <label>
+            Category
+            <select name="category" required>
+              <option value="campus_help">Campus Help</option>
+              <option value="study_together">Study Together</option>
+              <option value="social_connect">Social Connect</option>
+              <option value="campus_events">Campus Events</option>
+            </select>
+          </label>
+
+          <label>
+            Title
+            <input type="text" name="title" maxlength="120" required />
+          </label>
+
+          <label>
+            Description
+            <textarea name="description" maxlength="2000" rows="3" required></textarea>
+          </label>
+
+          <fieldset class="paid-toggle">
+            <legend>Is this paid?</legend>
+            <label><input type="radio" name="isPaid" value="free" checked /> Free</label>
+            <label><input type="radio" name="isPaid" value="paid" /> Paid</label>
+            <label class="amount-field" hidden>
+              Amount
+              <input type="text" name="amount" maxlength="40" placeholder="e.g. $20" />
+            </label>
+          </fieldset>
+
+          <button type="submit">Post</button>
+          <p class="form-status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+    </main>
+
+    <script src="/create.js"></script>
+  </body>
+</html>

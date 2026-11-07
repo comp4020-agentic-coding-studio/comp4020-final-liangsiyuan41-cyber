@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en-AU">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>My Activity — ANU TaskMate</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="site-nav" aria-label="Main navigation">
+        <a href="/" class="brand">ANU TaskMate</a>
+        <ul class="nav-links">
+          <li><a href="/" class="nav-link">Home</a></li>
+          <li><a href="/#communities" class="nav-link">Explore</a></li>
+          <li><a href="/create" class="nav-link nav-cta">Create Post</a></li>
+          <li><a href="/my-activity" class="nav-link">My Activity</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <section class="community-hero">
+      <a href="/#communities" class="back-link">← Back to all communities</a>
+      <h1>My Activity</h1>
+      <p>Everything you've posted, and everything you've applied to, in one place.</p>
+    </section>
+
+    <main>
+      <section class="panel">
+        <h2>My Posts</h2>
+        <p class="live-indicator" aria-live="polite" data-live-for="posts"></p>
+        <ul id="my-posts-feed" class="feed"></ul>
+        <p id="my-posts-empty" class="feed-empty" hidden>You haven't posted anything yet.</p>
+      </section>
+
+      <section class="panel">
+        <h2>My Applications</h2>
+        <p class="live-indicator" aria-live="polite" data-live-for="applications"></p>
+        <ul id="my-applications-feed" class="feed"></ul>
+        <p id="my-applications-empty" class="feed-empty" hidden>You haven't applied to anything yet.</p>
+      </section>
+    </main>
+
+    <script src="/post-card.js"></script>
+    <script src="/my-activity.js"></script>
+  </body>
+</html>

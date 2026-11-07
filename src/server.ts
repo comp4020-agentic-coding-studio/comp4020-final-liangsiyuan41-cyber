@@ -37,6 +37,13 @@ const COMMUNITY_PAGES: Record<string, string> = {
   "/community/campus-events": "/community/campus-events.html",
 };
 
+// Part 2: the posting form and the My Activity view each get their own real,
+// directly-navigable route too, the same reasoning as COMMUNITY_PAGES above.
+const STANDALONE_PAGES: Record<string, string> = {
+  "/create": "/create.html",
+  "/my-activity": "/my-activity.html",
+};
+
 async function serveStatic(path: string, res: ServerResponse): Promise<boolean> {
   try {
     const data = await readFile(`public${path}`);
@@ -124,6 +131,12 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
   const communityFile = COMMUNITY_PAGES[pathname];
   if (communityFile && req.method === "GET") {
     await serveStatic(communityFile, res);
+    return;
+  }
+
+  const standaloneFile = STANDALONE_PAGES[pathname];
+  if (standaloneFile && req.method === "GET") {
+    await serveStatic(standaloneFile, res);
     return;
   }
 

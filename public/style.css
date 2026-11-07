@@ -115,16 +115,6 @@ textarea:focus-visible,
   color: white;
 }
 
-.nav-link.nav-disabled {
-  color: #aaa;
-  cursor: not-allowed;
-}
-
-.nav-link.nav-disabled:hover {
-  background: none;
-  color: #aaa;
-}
-
 /* Hero: a wide photo banner with a navy overlay so a white heading stays
    readable regardless of what's underneath. The overlay is a gradient, not a
    flat tint, so text sits on its darkest band while the photo still reads

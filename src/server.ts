@@ -15,6 +15,11 @@ const STATIC_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
 };
 
 // Real, independently navigable routes for the four community pages — each

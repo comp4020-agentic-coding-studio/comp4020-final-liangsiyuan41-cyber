@@ -16,13 +16,22 @@ const STATUS_LABELS = {
 const feedEl = document.getElementById("feed");
 const feedEmptyEl = document.getElementById("feed-empty");
 const liveIndicatorEl = document.querySelector(".live-indicator");
+// The post form only exists on the homepage at this stage (see CLAUDE.md:
+// Part 1 keeps the existing posting form where it is — each community page's
+// "Create Post" entry point just links back to it). Every reference to it
+// below is guarded so app.js keeps working unchanged on pages without one.
 const postForm = document.getElementById("post-form");
-const formStatusEl = postForm.querySelector(".form-status");
-const amountField = postForm.querySelector(".amount-field");
-const tabs = Array.from(document.querySelectorAll(".tab"));
+const formStatusEl = postForm ? postForm.querySelector(".form-status") : null;
+const amountField = postForm ? postForm.querySelector(".amount-field") : null;
+
+// A community page sets this on <body> to show only its own category, with
+// no client-side tab filter standing in for a real page — see
+// public/community/*.html. Absent (homepage) means "show the latest across
+// every category", optionally capped by data-latest-limit.
+const PAGE_CATEGORY = document.body.dataset.category || null;
+const LATEST_LIMIT = document.body.dataset.latestLimit ? Number(document.body.dataset.latestLimit) : null;
 
 let posts = [];
-let activeCategory = "all";
 let myDisplayName = null;
 
 // Applicant-management panels are fetched lazily, only for posts the current
@@ -104,7 +113,10 @@ function renderApplicantPanel(post) {
 }
 
 function renderFeed() {
-  const visible = activeCategory === "all" ? posts : posts.filter((p) => p.category === activeCategory);
+  if (!feedEl) return;
+
+  let visible = PAGE_CATEGORY ? posts.filter((p) => p.category === PAGE_CATEGORY) : posts;
+  if (LATEST_LIMIT) visible = visible.slice(0, LATEST_LIMIT);
 
   feedEl.innerHTML = visible
     .map((post) => {
@@ -142,7 +154,7 @@ function renderFeed() {
     })
     .join("");
 
-  feedEmptyEl.hidden = visible.length > 0;
+  if (feedEmptyEl) feedEmptyEl.hidden = visible.length > 0;
 }
 
 async function loadApplicants(postId) {
@@ -182,71 +194,73 @@ async function loadWhoami() {
   const res = await fetch("/api/whoami");
   const data = await res.json();
   myDisplayName = data.displayName;
-  if (myDisplayName) {
+  if (myDisplayName && postForm) {
     postForm.elements.authorName.value = myDisplayName;
   }
 }
 
-tabs.forEach((tab) => {
-  tab.addEventListener("click", () => {
-    tabs.forEach((t) => t.classList.remove("active"));
-    tab.classList.add("active");
-    activeCategory = tab.dataset.category;
-    renderFeed();
-  });
-});
-
-postForm.querySelectorAll('input[name="isPaid"]').forEach((radio) => {
-  radio.addEventListener("change", () => {
-    amountField.hidden = postForm.elements.isPaid.value !== "paid";
-  });
-});
-
-postForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  formStatusEl.textContent = "Posting…";
-
-  const formData = new FormData(postForm);
-  const body = {
-    authorName: formData.get("authorName"),
-    category: formData.get("category"),
-    title: formData.get("title"),
-    description: formData.get("description"),
-    isPaid: formData.get("isPaid") === "paid",
-    amount: formData.get("amount"),
-  };
-
-  try {
-    const res = await fetch("/api/posts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      formStatusEl.textContent = err.error ?? "Could not post — please check the form.";
-      return;
-    }
-    const post = await res.json();
-    posts = [post, ...posts];
-    renderFeed();
-    formStatusEl.textContent = "Posted.";
-    postForm.elements.title.value = "";
-    postForm.elements.description.value = "";
-    setTimeout(() => {
-      formStatusEl.textContent = "";
-    }, 2000);
-  } catch {
-    formStatusEl.textContent = "Network error — your post was not saved.";
+if (postForm) {
+  // A community page's "Create Post" link can arrive at the homepage form
+  // with ?category=campus_help etc. (see public/community/*.html) so the
+  // form opens pre-set to the category the visitor came from.
+  const presetCategory = new URLSearchParams(location.search).get("category");
+  if (presetCategory && postForm.elements.category.querySelector(`option[value="${presetCategory}"]`)) {
+    postForm.elements.category.value = presetCategory;
   }
-});
+
+  postForm.querySelectorAll('input[name="isPaid"]').forEach((radio) => {
+    radio.addEventListener("change", () => {
+      amountField.hidden = postForm.elements.isPaid.value !== "paid";
+    });
+  });
+
+  postForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    formStatusEl.textContent = "Posting…";
+
+    const formData = new FormData(postForm);
+    const body = {
+      authorName: formData.get("authorName"),
+      category: formData.get("category"),
+      title: formData.get("title"),
+      description: formData.get("description"),
+      isPaid: formData.get("isPaid") === "paid",
+      amount: formData.get("amount"),
+    };
+
+    try {
+      const res = await fetch("/api/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        formStatusEl.textContent = err.error ?? "Could not post — please check the form.";
+        return;
+      }
+      const post = await res.json();
+      posts = [post, ...posts];
+      renderFeed();
+      formStatusEl.textContent = "Posted.";
+      postForm.elements.title.value = "";
+      postForm.elements.description.value = "";
+      setTimeout(() => {
+        formStatusEl.textContent = "";
+      }, 2000);
+    } catch {
+      formStatusEl.textContent = "Network error — your post was not saved.";
+    }
+  });
+}
 
 feedEl.addEventListener("click", async (e) => {
   const btn = e.target.closest(".apply-btn");
   if (!btn) return;
 
   const postId = btn.dataset.postId;
-  const applicantName = postForm.elements.authorName.value.trim() || prompt("Your name, so the poster knows who applied:");
+  const defaultName = postForm ? postForm.elements.authorName.value.trim() : myDisplayName ?? "";
+  const applicantName = defaultName || prompt("Your name, so the poster knows who applied:");
   if (!applicantName) return;
 
   btn.disabled = true;

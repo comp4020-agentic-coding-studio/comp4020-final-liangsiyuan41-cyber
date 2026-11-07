@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en-AU">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Campus Events — ANU TaskMate</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body data-category="campus_events">
+    <header class="site-header">
+      <nav class="site-nav" aria-label="Main navigation">
+        <a href="/" class="brand">ANU TaskMate</a>
+        <ul class="nav-links">
+          <li><a href="/" class="nav-link">Home</a></li>
+          <li><a href="/#communities" class="nav-link">Explore</a></li>
+          <li><a href="/?category=campus_events#create-post" class="nav-link nav-cta">Create Post</a></li>
+          <li>
+            <span class="nav-link nav-disabled" title="Coming in a later stage" aria-disabled="true">
+              My Activity
+            </span>
+          </li>
+        </ul>
+      </nav>
+    </header>
+
+    <section class="community-hero">
+      <a href="/#communities" class="back-link">← Back to all communities</a>
+      <h1>Campus Events</h1>
+      <p>University clubs and campus activities — find out what's on and get involved.</p>
+    </section>
+
+    <main>
+      <section class="panel">
+        <h2>Posts in Campus Events</h2>
+        <p class="live-indicator" aria-live="polite"></p>
+        <ul id="feed" class="feed"></ul>
+        <p id="feed-empty" class="feed-empty" hidden>No Campus Events posts yet — be the first.</p>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

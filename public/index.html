@@ -6,17 +6,85 @@
     <title>ANU TaskMate</title>
     <link rel="stylesheet" href="/style.css" />
   </head>
-  <body>
-    <header>
-      <h1>ANU TaskMate</h1>
-      <p class="tagline">
-        Post a paid or free opportunity, or apply to one someone else posted.
-        <a href="/readme/">What this app is for</a>
-      </p>
+  <body data-latest-limit="6">
+    <header class="site-header">
+      <nav class="site-nav" aria-label="Main navigation">
+        <a href="/" class="brand">ANU TaskMate</a>
+        <ul class="nav-links">
+          <li><a href="/" class="nav-link">Home</a></li>
+          <li><a href="#communities" class="nav-link">Explore</a></li>
+          <li><a href="#create-post" class="nav-link nav-cta">Create Post</a></li>
+          <li>
+            <span class="nav-link nav-disabled" title="Coming in a later stage" aria-disabled="true">
+              My Activity
+            </span>
+          </li>
+        </ul>
+      </nav>
     </header>
 
+    <section class="hero">
+      <h1>Your campus. Your community.</h1>
+      <p>Find help, study together, make new connections, and discover opportunities across ANU.</p>
+    </section>
+
+    <section class="communities" id="communities">
+      <h2>Explore communities</h2>
+      <div class="community-grid">
+        <a href="/community/campus-help" class="community-card">
+          <span class="community-card-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a5 5 0 0 0-5 5v3a5 5 0 0 0 10 0V7a5 5 0 0 0-5-5Z" />
+              <path d="M7 14v1a5 5 0 0 0 10 0v-1" />
+              <path d="M12 20v2" />
+            </svg>
+          </span>
+          <h3>Campus Help</h3>
+          <p>Everyday assistance and shared resources</p>
+        </a>
+
+        <a href="/community/study-together" class="community-card">
+          <span class="community-card-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 7v13" />
+              <path d="M3 6a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H3Z" />
+              <path d="M21 6a2 2 0 0 0-2-2h-5a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h7Z" />
+            </svg>
+          </span>
+          <h3>Study Together</h3>
+          <p>Study groups, course discussions and skill sharing</p>
+        </a>
+
+        <a href="/community/social-connect" class="community-card">
+          <span class="community-card-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="9" cy="8" r="3.25" />
+              <path d="M2.75 19a6.25 6.25 0 0 1 12.5 0" />
+              <path d="M15.5 6.5c1.4.3 2.5 1.6 2.5 3.1 0 1.5-1.1 2.8-2.5 3.1" />
+              <path d="M17 13.5c2 .4 3.5 1.9 3.5 3.8" />
+            </svg>
+          </span>
+          <h3>Social Connect</h3>
+          <p>Language exchange, friendships and shared interests</p>
+        </a>
+
+        <a href="/community/campus-events" class="community-card">
+          <span class="community-card-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4.5" width="18" height="16" rx="2" />
+              <path d="M3 9.5h18" />
+              <path d="M8 2.5v4" />
+              <path d="M16 2.5v4" />
+            </svg>
+          </span>
+          <h3>Campus Events</h3>
+          <p>University clubs and campus activities</p>
+        </a>
+      </div>
+    </section>
+
     <main>
-      <section class="panel">
+      <section class="panel" id="create-post">
         <h2>Post an opportunity</h2>
         <form id="post-form">
           <label>
@@ -60,19 +128,16 @@
       </section>
 
       <section class="panel">
-        <h2>Community feed</h2>
-        <div class="tabs" role="tablist" aria-label="Filter by category">
-          <button type="button" class="tab active" data-category="all">All</button>
-          <button type="button" class="tab" data-category="campus_help">Campus Help</button>
-          <button type="button" class="tab" data-category="study_together">Study Together</button>
-          <button type="button" class="tab" data-category="social_connect">Social Connect</button>
-          <button type="button" class="tab" data-category="campus_events">Campus Events</button>
-        </div>
+        <h2>Latest Posts</h2>
         <p class="live-indicator" aria-live="polite"></p>
         <ul id="feed" class="feed"></ul>
-        <p id="feed-empty" class="feed-empty" hidden>No posts in this category yet — be the first.</p>
+        <p id="feed-empty" class="feed-empty" hidden>No posts yet — be the first.</p>
       </section>
     </main>
+
+    <p style="text-align: center; color: #777; font-size: 0.85rem; padding-bottom: 2rem">
+      <a href="/readme/">What this app is for</a>
+    </p>
 
     <script src="/app.js"></script>
   </body>

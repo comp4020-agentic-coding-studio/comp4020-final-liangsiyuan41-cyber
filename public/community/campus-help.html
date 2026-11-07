@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en-AU">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Campus Help — ANU TaskMate</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body data-category="campus_help">
+    <header class="site-header">
+      <nav class="site-nav" aria-label="Main navigation">
+        <a href="/" class="brand">ANU TaskMate</a>
+        <ul class="nav-links">
+          <li><a href="/" class="nav-link">Home</a></li>
+          <li><a href="/#communities" class="nav-link">Explore</a></li>
+          <li><a href="/?category=campus_help#create-post" class="nav-link nav-cta">Create Post</a></li>
+          <li>
+            <span class="nav-link nav-disabled" title="Coming in a later stage" aria-disabled="true">
+              My Activity
+            </span>
+          </li>
+        </ul>
+      </nav>
+    </header>
+
+    <section class="community-hero">
+      <a href="/#communities" class="back-link">← Back to all communities</a>
+      <h1>Campus Help</h1>
+      <p>Everyday assistance and shared resources — ask for a hand, lend one, or share something another student could use.</p>
+    </section>
+
+    <main>
+      <section class="panel">
+        <h2>Posts in Campus Help</h2>
+        <p class="live-indicator" aria-live="polite"></p>
+        <ul id="feed" class="feed"></ul>
+        <p id="feed-empty" class="feed-empty" hidden>No Campus Help posts yet — be the first.</p>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

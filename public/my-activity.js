@@ -11,15 +11,22 @@ const myPostsFeedEl = document.getElementById("my-posts-feed");
 const myPostsEmptyEl = document.getElementById("my-posts-empty");
 const myApplicationsFeedEl = document.getElementById("my-applications-feed");
 const myApplicationsEmptyEl = document.getElementById("my-applications-empty");
+const postsLiveEl = document.querySelector('[data-live-for="posts"]');
+const applicationsLiveEl = document.querySelector('[data-live-for="applications"]');
 
 let posts = [];
+let hasLoadedOnce = false;
 
 // Each section gets its own applicant-panel state — a panel opened in "My
 // Posts" shouldn't affect "My Applications" (which never shows one anyway,
 // since renderApplicantPanel only renders for isOwnPost rows, but keeping
 // the state separate avoids any cross-section coupling).
-const postsPanelState = { expandedApplicantPosts: new Set(), applicantsCache: new Map() };
-const applicationsPanelState = { expandedApplicantPosts: new Set(), applicantsCache: new Map() };
+const postsPanelState = { expandedApplicantPosts: new Set(), applicantsCache: new Map(), cardMessages: new Map() };
+const applicationsPanelState = {
+  expandedApplicantPosts: new Set(),
+  applicantsCache: new Map(),
+  cardMessages: new Map(),
+};
 
 function renderSection(feedEl, emptyEl, visiblePosts, panelState) {
   if (!feedEl) return;
@@ -51,8 +58,22 @@ async function refreshOpenApplicantPanels() {
 }
 
 async function loadPosts() {
-  const res = await fetch("/api/posts");
-  posts = await res.json();
+  try {
+    const res = await fetch("/api/posts");
+    posts = await res.json();
+  } catch {
+    if (!hasLoadedOnce) {
+      const message = "Couldn't load your activity — check your connection.";
+      if (postsLiveEl) postsLiveEl.textContent = message;
+      if (applicationsLiveEl) applicationsLiveEl.textContent = message;
+    }
+    return;
+  }
+  if (!hasLoadedOnce) {
+    if (postsLiveEl) postsLiveEl.textContent = "";
+    if (applicationsLiveEl) applicationsLiveEl.textContent = "";
+  }
+  hasLoadedOnce = true;
   renderAll();
   await refreshOpenApplicantPanels();
 }
@@ -79,6 +100,9 @@ function connectEvents() {
   source.addEventListener("application:status", loadPosts);
   source.addEventListener("open", loadPosts);
 }
+
+if (postsLiveEl) postsLiveEl.textContent = "Loading…";
+if (applicationsLiveEl) applicationsLiveEl.textContent = "Loading…";
 
 loadPosts();
 connectEvents();

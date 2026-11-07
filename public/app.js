@@ -24,6 +24,9 @@ let myDisplayName = null;
 // open panel or blank out data the author is currently looking at.
 const expandedApplicantPosts = new Set();
 const applicantsCache = new Map();
+// Transient per-card error/feedback text (e.g. "Network error — your
+// application was not sent."); see post-card.js's renderPostCard.
+const cardMessages = new Map();
 
 function renderFeed() {
   if (!feedEl) return;
@@ -31,7 +34,9 @@ function renderFeed() {
   let visible = PAGE_CATEGORY ? posts.filter((p) => p.category === PAGE_CATEGORY) : posts;
   if (LATEST_LIMIT) visible = visible.slice(0, LATEST_LIMIT);
 
-  feedEl.innerHTML = visible.map((post) => renderPostCard(post, { expandedApplicantPosts, applicantsCache })).join("");
+  feedEl.innerHTML = visible
+    .map((post) => renderPostCard(post, { expandedApplicantPosts, applicantsCache, cardMessages }))
+    .join("");
 
   if (feedEmptyEl) feedEmptyEl.hidden = visible.length > 0;
 }
@@ -45,9 +50,18 @@ async function loadApplicants(postId) {
   applicantsCache.set(postId, await res.json());
 }
 
+let hasLoadedOnce = false;
+
 async function loadPosts() {
-  const res = await fetch("/api/posts");
-  posts = await res.json();
+  try {
+    const res = await fetch("/api/posts");
+    posts = await res.json();
+  } catch {
+    if (liveIndicatorEl && !hasLoadedOnce) liveIndicatorEl.textContent = "Couldn't load posts — check your connection.";
+    return;
+  }
+  if (!hasLoadedOnce && liveIndicatorEl) liveIndicatorEl.textContent = "";
+  hasLoadedOnce = true;
   renderFeed();
   await refreshOpenApplicantPanels();
 }
@@ -73,6 +87,7 @@ if (feedEl) {
   attachFeedInteractions(feedEl, {
     expandedApplicantPosts,
     applicantsCache,
+    cardMessages,
     reload: loadPosts,
     rerender: renderFeed,
     getDefaultApplicantName: () => myDisplayName ?? "",
@@ -121,6 +136,8 @@ function flashLive(message) {
     liveIndicatorEl.textContent = "";
   }, 1500);
 }
+
+if (liveIndicatorEl && feedEl) liveIndicatorEl.textContent = "Loading…";
 
 loadWhoami();
 loadPosts();

@@ -308,6 +308,14 @@ main {
   font-weight: 600;
 }
 
+/* [hidden] alone loses to #post-form label's higher-specificity `display:
+   flex` above, which would otherwise show the Amount field even while its
+   `hidden` attribute is set (e.g. right after the page loads with Free
+   selected). */
+#post-form label[hidden] {
+  display: none;
+}
+
 #post-form input[type="text"],
 #post-form select,
 #post-form textarea {
@@ -319,11 +327,16 @@ main {
 
 .paid-toggle {
   display: flex;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
   align-items: center;
   border: none;
   padding: 0;
   margin: 0;
+  /* <fieldset> defaults to min-width: min-content, which a flex column
+     parent (#post-form) won't let shrink below the viewport on narrow
+     screens, causing the whole form to overflow horizontally. */
+  min-width: 0;
 }
 
 .paid-toggle legend {
@@ -473,6 +486,12 @@ button[type="submit"]:hover,
   margin: 0 0 0.75rem;
   color: #333;
   white-space: pre-wrap;
+}
+
+.post-card-message {
+  margin: 0.6rem 0 0;
+  font-size: 0.82rem;
+  color: #a33a3a;
 }
 
 .post-card-footer {
@@ -771,6 +790,20 @@ button[type="submit"]:hover,
 
   button[type="submit"] {
     width: 100%;
+  }
+
+  /* Comfortable tap targets on touch screens for every interactive control
+     this app has, not just the ones already covered above. */
+  #post-form input[type="text"],
+  #post-form select,
+  #post-form textarea,
+  button[type="submit"],
+  .apply-btn,
+  .request-cancellation-btn,
+  .applicants-toggle,
+  .decide-btn,
+  .tab {
+    min-height: 2.75rem;
   }
 }
 

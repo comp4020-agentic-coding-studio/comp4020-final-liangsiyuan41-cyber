@@ -106,7 +106,12 @@ function renderApplicantPanel(post, { expandedApplicantPosts, applicantsCache })
 // serialised post from GET /api/posts (src/routes/posts.ts), so this is pure
 // presentation: no permission decision is made here that the server hasn't
 // already made.
-function renderPostCard(post, { expandedApplicantPosts, applicantsCache }) {
+//
+// `cardMessages` (postId -> string, optional) carries a transient
+// error/feedback line for a card whose last action failed — e.g. a network
+// error on Apply. It's not part of the post's own data, so it's passed
+// alongside it rather than folded into `post`.
+function renderPostCard(post, { expandedApplicantPosts, applicantsCache, cardMessages }) {
   const priceLabel = post.isPaid ? `Paid${post.amount ? ` · ${escapeHtml(post.amount)}` : ""}` : "Free";
   const statusBadge = `<span class="badge applied status-${post.myApplicationStatus}">${STATUS_LABELS[post.myApplicationStatus] ?? "Applied"}</span>`;
   const requestCancellationBtn = `<button type="button" class="request-cancellation-btn" data-post-id="${post.id}">Request Cancellation</button>`;
@@ -119,6 +124,8 @@ function renderPostCard(post, { expandedApplicantPosts, applicantsCache }) {
           : `${statusBadge}${requestCancellationBtn}`
         : statusBadge
       : `<button type="button" class="apply-btn" data-post-id="${post.id}">Apply</button>`;
+
+  const message = cardMessages?.get(post.id);
 
   return `
     <li class="post-card" data-post-id="${post.id}">
@@ -135,6 +142,7 @@ function renderPostCard(post, { expandedApplicantPosts, applicantsCache }) {
         </span>
         ${applyControl}
       </div>
+      ${message ? `<p class="post-card-message" role="status">${escapeHtml(message)}</p>` : ""}
       ${renderApplicantPanel(post, { expandedApplicantPosts, applicantsCache })}
     </li>
   `;
@@ -158,19 +166,27 @@ function attachFeedInteractions(containerEl, ctx) {
   }
   ctx.loadApplicants = loadApplicants;
 
+  function setMessage(postId, message) {
+    if (!ctx.cardMessages) return;
+    if (message) ctx.cardMessages.set(postId, message);
+    else ctx.cardMessages.delete(postId);
+  }
+
   containerEl.addEventListener("click", async (e) => {
     const btn = e.target.closest(".apply-btn");
     if (!btn) return;
 
+    const postId = Number(btn.dataset.postId);
     const defaultName = ctx.getDefaultApplicantName ? ctx.getDefaultApplicantName() : "";
     const applicantName = defaultName || prompt("Your name, so the poster knows who applied:");
     if (!applicantName) return;
 
     btn.disabled = true;
     btn.textContent = "Applying…";
+    setMessage(postId, null);
 
     try {
-      const res = await fetch(`/api/posts/${btn.dataset.postId}/apply`, {
+      const res = await fetch(`/api/posts/${postId}/apply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ applicantName }),
@@ -179,19 +195,25 @@ function attachFeedInteractions(containerEl, ctx) {
       if (res.status === 409) {
         // Someone else's tab for the same session got there first — the
         // server, not this click, is the source of truth here.
+        setMessage(postId, "You've already applied to this post.");
         await ctx.reload();
         return;
       }
       if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setMessage(postId, body.error ?? "Could not apply — please try again.");
         btn.disabled = false;
         btn.textContent = "Apply";
+        ctx.rerender();
         return;
       }
 
       await ctx.reload();
     } catch {
+      setMessage(postId, "Network error — your application was not sent.");
       btn.disabled = false;
       btn.textContent = "Apply";
+      ctx.rerender();
     }
   });
 
@@ -199,13 +221,15 @@ function attachFeedInteractions(containerEl, ctx) {
     const btn = e.target.closest(".request-cancellation-btn");
     if (!btn) return;
 
+    const postId = Number(btn.dataset.postId);
     const reason = prompt("Optional: let the post author know why (visible only to them).") ?? "";
 
     btn.disabled = true;
     btn.textContent = "Requesting…";
+    setMessage(postId, null);
 
     try {
-      const res = await fetch(`/api/posts/${btn.dataset.postId}/cancellation-request`, {
+      const res = await fetch(`/api/posts/${postId}/cancellation-request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason }),
@@ -213,12 +237,17 @@ function attachFeedInteractions(containerEl, ctx) {
       if (res.ok) {
         await ctx.reload();
       } else {
+        const body = await res.json().catch(() => ({}));
+        setMessage(postId, body.error ?? "Could not request cancellation — please try again.");
         btn.disabled = false;
         btn.textContent = "Request Cancellation";
+        ctx.rerender();
       }
     } catch {
+      setMessage(postId, "Network error — your request was not sent.");
       btn.disabled = false;
       btn.textContent = "Request Cancellation";
+      ctx.rerender();
     }
   });
 

@@ -246,3 +246,144 @@ button[type="submit"]:hover,
   color: #777;
   font-style: italic;
 }
+
+.status-pill {
+  font-size: 0.75rem;
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  font-weight: 600;
+}
+
+.status-pending {
+  background: #eef1f6;
+  color: #444;
+}
+
+.status-accepted {
+  background: #e7f5e9;
+  color: #2a6b2a;
+}
+
+.status-declined {
+  background: #fbe7e7;
+  color: #a33a3a;
+}
+
+.badge.status-accepted {
+  background: #e7f5e9;
+  color: #2a6b2a;
+}
+
+.badge.status-declined {
+  background: #fbe7e7;
+  color: #a33a3a;
+}
+
+.applicant-panel {
+  margin-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+.applicants-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  padding: 0.35rem 0.75rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--blue);
+  cursor: pointer;
+}
+
+.applicants-toggle:hover {
+  background: var(--bg);
+}
+
+.applicants-body {
+  margin-top: 0.6rem;
+}
+
+.applicants-status {
+  margin: 0;
+  color: #777;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.applicant-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.applicant-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.85rem;
+}
+
+.applicant-name {
+  font-weight: 600;
+  flex: 1;
+  min-width: 6rem;
+}
+
+.applicant-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.decide-btn {
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 0.25rem;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: white;
+}
+
+.decide-btn.accept {
+  color: #2a6b2a;
+  border-color: #bfe0c3;
+}
+
+.decide-btn.accept:hover:not(:disabled) {
+  background: #e7f5e9;
+}
+
+.decide-btn.decline {
+  color: #a33a3a;
+  border-color: #f0c3c3;
+}
+
+.decide-btn.decline:hover:not(:disabled) {
+  background: #fbe7e7;
+}
+
+.decide-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@media (max-width: 480px) {
+  .applicant-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .applicant-actions {
+    justify-content: flex-end;
+  }
+}

@@ -5,6 +5,12 @@ const CATEGORY_LABELS = {
   campus_events: "Campus Events",
 };
 
+const STATUS_LABELS = {
+  pending: "Pending",
+  accepted: "Accepted",
+  declined: "Declined",
+};
+
 const feedEl = document.getElementById("feed");
 const feedEmptyEl = document.getElementById("feed-empty");
 const liveIndicatorEl = document.querySelector(".live-indicator");
@@ -17,8 +23,59 @@ let posts = [];
 let activeCategory = "all";
 let myDisplayName = null;
 
+// Applicant-management panels are fetched lazily, only for posts the current
+// visitor owns (the server enforces that; see src/routes/applications.ts).
+// Kept outside `posts` so an SSE-triggered re-render doesn't collapse an
+// open panel or blank out data the author is currently looking at.
+const expandedApplicantPosts = new Set();
+const applicantsCache = new Map();
+
 function escapeHtml(s) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
+function renderApplicantPanel(post) {
+  if (!post.isOwnPost) return "";
+
+  const isOpen = expandedApplicantPosts.has(post.id);
+  const applicants = applicantsCache.get(post.id);
+
+  let body = "";
+  if (isOpen) {
+    if (!applicants) {
+      body = `<p class="applicants-status">Loading…</p>`;
+    } else if (applicants.length === 0) {
+      body = `<p class="applicants-status">No applicants yet.</p>`;
+    } else {
+      body = `
+        <ul class="applicant-list">
+          ${applicants
+            .map(
+              (a) => `
+            <li class="applicant-row" data-application-id="${a.id}">
+              <span class="applicant-name">${escapeHtml(a.applicantName)}</span>
+              <span class="status-pill status-${a.status}">${STATUS_LABELS[a.status] ?? a.status}</span>
+              <span class="applicant-actions">
+                <button type="button" class="decide-btn accept" data-post-id="${post.id}" data-application-id="${a.id}" data-status="accepted" ${a.status === "accepted" ? "disabled" : ""}>Accept</button>
+                <button type="button" class="decide-btn decline" data-post-id="${post.id}" data-application-id="${a.id}" data-status="declined" ${a.status === "declined" ? "disabled" : ""}>Decline</button>
+              </span>
+            </li>
+          `,
+            )
+            .join("")}
+        </ul>
+      `;
+    }
+  }
+
+  return `
+    <div class="applicant-panel">
+      <button type="button" class="applicants-toggle" data-post-id="${post.id}" aria-expanded="${isOpen}">
+        ${isOpen ? "Hide applicants" : "Manage applicants"}
+      </button>
+      ${isOpen ? `<div class="applicants-body">${body}</div>` : ""}
+    </div>
+  `;
 }
 
 function renderFeed() {
@@ -30,7 +87,7 @@ function renderFeed() {
       const applyControl = post.isOwnPost
         ? `<span class="badge">Your post</span>`
         : post.appliedByMe
-          ? `<span class="badge applied">Applied</span>`
+          ? `<span class="badge applied status-${post.myApplicationStatus}">${STATUS_LABELS[post.myApplicationStatus] ?? "Applied"}</span>`
           : `<button type="button" class="apply-btn" data-post-id="${post.id}">Apply</button>`;
 
       return `
@@ -48,6 +105,7 @@ function renderFeed() {
             </span>
             ${applyControl}
           </div>
+          ${renderApplicantPanel(post)}
         </li>
       `;
     })
@@ -56,9 +114,36 @@ function renderFeed() {
   feedEmptyEl.hidden = visible.length > 0;
 }
 
+async function loadApplicants(postId) {
+  const res = await fetch(`/api/posts/${postId}/applicants`);
+  if (!res.ok) {
+    applicantsCache.set(postId, []);
+    return;
+  }
+  applicantsCache.set(postId, await res.json());
+}
+
 async function loadPosts() {
   const res = await fetch("/api/posts");
   posts = await res.json();
+  renderFeed();
+  await refreshOpenApplicantPanels();
+}
+
+// Keeps any currently-open "Manage applicants" panel in sync with the
+// server, the same re-fetch-on-signal pattern as the rest of the feed
+// (see docs/adr-0001-…md) — an SSE application:status event never carries
+// the applicant list itself, only an identifier.
+async function refreshOpenApplicantPanels() {
+  const ownPostIds = new Set(posts.filter((p) => p.isOwnPost).map((p) => p.id));
+  for (const postId of expandedApplicantPosts) {
+    if (!ownPostIds.has(postId)) {
+      expandedApplicantPosts.delete(postId);
+      applicantsCache.delete(postId);
+      continue;
+    }
+    await loadApplicants(postId);
+  }
   renderFeed();
 }
 
@@ -162,6 +247,41 @@ feedEl.addEventListener("click", async (e) => {
   }
 });
 
+feedEl.addEventListener("click", async (e) => {
+  const toggleBtn = e.target.closest(".applicants-toggle");
+  if (toggleBtn) {
+    const postId = Number(toggleBtn.dataset.postId);
+    if (expandedApplicantPosts.has(postId)) {
+      expandedApplicantPosts.delete(postId);
+      renderFeed();
+      return;
+    }
+    expandedApplicantPosts.add(postId);
+    renderFeed();
+    await loadApplicants(postId);
+    renderFeed();
+    return;
+  }
+
+  const decideBtn = e.target.closest(".decide-btn");
+  if (decideBtn) {
+    const { postId, applicationId, status } = decideBtn.dataset;
+    decideBtn.disabled = true;
+    try {
+      const res = await fetch(`/api/posts/${postId}/applicants/${applicationId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        await loadApplicants(Number(postId));
+      }
+    } finally {
+      renderFeed();
+    }
+  }
+});
+
 function connectEvents() {
   const source = new EventSource("/events");
 
@@ -173,6 +293,11 @@ function connectEvents() {
   source.addEventListener("application:count", () => {
     loadPosts();
     flashLive("Application count updated");
+  });
+
+  source.addEventListener("application:status", () => {
+    loadPosts();
+    flashLive("Application status updated");
   });
 
   // On any drop (network blip, server restart) EventSource reconnects on

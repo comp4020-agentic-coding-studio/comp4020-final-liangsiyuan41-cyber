@@ -35,9 +35,22 @@ db.exec(`
     post_id INTEGER NOT NULL REFERENCES posts(id),
     applicant_session_id TEXT NOT NULL REFERENCES sessions(id),
     applicant_name TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined')),
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     UNIQUE (post_id, applicant_session_id)
   );
 
   CREATE INDEX IF NOT EXISTS idx_applications_post_id ON applications(post_id);
 `);
+
+// Older `/data` volumes (and local dev DBs) predate the `status` column —
+// CREATE TABLE IF NOT EXISTS above won't add it to a table that already
+// exists, so migrate it in by hand, guarded so this stays safe to run on
+// every boot.
+const applicationColumns = db.prepare("PRAGMA table_info(applications)").all() as { name: string }[];
+if (!applicationColumns.some((c) => c.name === "status")) {
+  db.exec(`
+    ALTER TABLE applications
+    ADD COLUMN status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined'))
+  `);
+}

@@ -5,7 +5,7 @@ import "./db.ts";
 import { resolveSession } from "./session.ts";
 import { addClient } from "./events.ts";
 import { listPosts, createPost } from "./routes/posts.ts";
-import { applyToPost } from "./routes/applications.ts";
+import { applyToPost, listApplicants, setApplicationStatus } from "./routes/applications.ts";
 import { whoami } from "./routes/whoami.ts";
 import { renderReadmePage } from "./readme.ts";
 
@@ -72,6 +72,20 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
   if (applyMatch && req.method === "POST") {
     const session = resolveSession(req, res);
     await applyToPost(req, res, session, Number(applyMatch[1]));
+    return;
+  }
+
+  const applicantsMatch = pathname.match(/^\/api\/posts\/(\d+)\/applicants$/);
+  if (applicantsMatch && req.method === "GET") {
+    const session = resolveSession(req, res);
+    listApplicants(res, session, Number(applicantsMatch[1]));
+    return;
+  }
+
+  const decisionMatch = pathname.match(/^\/api\/posts\/(\d+)\/applicants\/(\d+)$/);
+  if (decisionMatch && req.method === "PATCH") {
+    const session = resolveSession(req, res);
+    await setApplicationStatus(req, res, session, Number(decisionMatch[1]), Number(decisionMatch[2]));
     return;
   }
 

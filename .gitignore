@@ -24,3 +24,10 @@ mise.local.toml
 # your course API key, and this repo goes public when you ship. Your tracked
 # harness is CLAUDE.md (and any AGENTS.md), not this directory.
 .claude/
+
+# Large, unoptimised source images kept only as a local design reference.
+# Two of the five (hero-anu, campus-events) have an unverified source/license,
+# so they're never committed or shipped — the deployed site uses the
+# optimised, verified images in public/images/ instead (see
+# public/images/ATTRIBUTION.md).
+/public/image/

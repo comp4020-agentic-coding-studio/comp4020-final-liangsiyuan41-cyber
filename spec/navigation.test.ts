@@ -113,6 +113,11 @@ it("each community route is a plain GET that works the same on a fresh request a
   }
 });
 
+// This test's own wait time (4 pages x 1200ms) leaves very little margin
+// under Vitest's 5000ms default per-test timeout once JSDOM/network overhead
+// is added, so it flakes under concurrent spec-file execution even though
+// the assertions below never fail. An explicit, generous timeout fixes the
+// margin without touching what's actually checked.
 it("a community page shows only posts from its own category, filtering out the rest", async () => {
   const author = session();
 
@@ -173,7 +178,7 @@ it("a community page shows only posts from its own category, filtering out the r
 
     dom.window.close();
   }
-});
+}, 20000);
 
 it("existing post actions (apply) still work when driven from a community page", async () => {
   const author = session();

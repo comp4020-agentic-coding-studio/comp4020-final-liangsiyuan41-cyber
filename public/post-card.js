@@ -43,6 +43,14 @@ const CONTACT_METHOD_LABELS = {
 // here too so the UI never offers a save control the server would reject.
 const CONTACT_UNLOCKED_STATUSES = new Set(["accepted", "completed"]);
 
+// The *other* participant's role label, from this viewer's own role — e.g.
+// the owner's Contact Details panel is about "the Applicant", the
+// applicant's is about "the Post Owner".
+const OTHER_PARTICIPANT_ROLE_LABEL = {
+  owner: "Applicant",
+  applicant: "Post Owner",
+};
+
 function escapeHtml(s) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 }
@@ -71,46 +79,73 @@ function contactMethodOptions(selected) {
     .join("");
 }
 
-function formatContact(contact) {
-  if (!contact) return null;
-  return `${CONTACT_METHOD_LABELS[contact.contactMethod] ?? contact.contactMethod}: ${escapeHtml(contact.contactValue)}`;
+// Renders the "Other Participant's Contact" sub-panel: their name, role,
+// preferred contact method and shared contact information when available,
+// a Copy button for the shared value, or a clear empty-state message when
+// they haven't shared anything yet. `other` is {contactMethod, contactValue,
+// updatedAt} or null — read-only, there is no form here, since only its own
+// owner can ever change this via the "My Contact Details" panel below.
+function renderOtherParticipantContact(other, { otherParticipantName, otherRoleLabel }) {
+  const name = otherParticipantName ? escapeHtml(otherParticipantName) : otherRoleLabel;
+
+  if (!other) {
+    return `
+      <div class="contact-party contact-party-other">
+        <h5 class="contact-party-heading">Other Participant's Contact</h5>
+        <p class="contact-empty">${escapeHtml(name)} (${otherRoleLabel}) hasn't shared contact details yet.</p>
+      </div>
+    `;
+  }
+
+  const methodLabel = CONTACT_METHOD_LABELS[other.contactMethod] ?? other.contactMethod;
+  return `
+    <div class="contact-party contact-party-other">
+      <h5 class="contact-party-heading">Other Participant's Contact</h5>
+      <p class="contact-party-identity"><strong>${escapeHtml(name)}</strong> <span class="contact-party-role">(${otherRoleLabel})</span></p>
+      <p class="contact-detail-row">
+        <span class="contact-detail-label">Preferred contact method</span>
+        <span class="contact-detail-value">${escapeHtml(methodLabel)}</span>
+      </p>
+      <p class="contact-detail-row">
+        <span class="contact-detail-label">Contact information</span>
+        <span class="contact-detail-value" data-contact-value="${escapeHtml(other.contactValue)}">${escapeHtml(other.contactValue)}</span>
+        <button type="button" class="copy-contact-btn" data-copy-value="${escapeHtml(other.contactValue)}">Copy</button>
+      </p>
+    </div>
+  `;
 }
 
-// Renders the Contact Details section for one accepted/completed
-// application. `own`/`other` are {contactMethod, contactValue, updatedAt} or
-// null (not yet shared) — the caller (owner or applicant view) already did
-// the access check server-side by the time this data exists at all; this is
-// pure presentation, same as renderApplicantPanel.
-//
-// `role` ("owner" | "applicant") only changes which endpoint the form saves
-// to and which state-map key it reads — the markup and the four states
-// (loading, empty, saving/error, saved) are identical either side. The
-// owner's save targets one specific application (postId + applicationId, one
-// contact exchange per accepted applicant); the applicant's save targets
-// their own application on this post (postId alone — the same "no
-// application id in the URL" shape src/routes/applications.ts's
-// requestCancellation already uses, since a visitor can only ever have one
-// application per post).
-function renderContactSection(post, { applicationId, role }, contactState) {
-  const key = role === "owner" ? `owner:${applicationId}` : `applicant:${post.id}`;
-  const state = contactState?.get(key) ?? {};
-  const { own, other } = state.contacts ?? { own: null, other: null };
-  const status = state.status; // undefined | 'loading' | 'saving' | 'error' | 'success'
-  const errorMessage = state.error;
-
-  const otherLabel = role === "owner" ? "Applicant's contact information" : "Post owner's contact information";
-  const otherLine = other
-    ? `<p class="contact-shared"><strong>${otherLabel}:</strong> ${formatContact(other)}</p>`
-    : `<p class="contact-empty">${role === "owner" ? "The applicant hasn't" : "The post owner hasn't"} shared contact details yet.</p>`;
-
+// Renders the "My Contact Details" sub-panel: this viewer's own saved
+// method/value (if any), editable via the same save form/endpoint the
+// feature has always used — editing is just submitting the form again, the
+// server-side upsert in src/routes/contacts.ts already overwrites rather
+// than rejecting a second save.
+function renderMyContact(post, { applicationId, role }, own, { status, errorMessage }) {
   const selectedMethod = own?.contactMethod ?? "phone";
   const savedValue = own?.contactValue ?? "";
+  const savedMethodLabel = own ? (CONTACT_METHOD_LABELS[own.contactMethod] ?? own.contactMethod) : null;
+
+  // The currently-saved method/value, shown separately from the edit form
+  // below it — editing is still just resubmitting that same form (Feature 5
+  // of this redesign: "allow users to edit ... using the existing save
+  // functionality", not a second, different edit control).
+  const savedReadout = own
+    ? `
+      <p class="contact-detail-row">
+        <span class="contact-detail-label">Preferred contact method</span>
+        <span class="contact-detail-value">${escapeHtml(savedMethodLabel)}</span>
+      </p>
+      <p class="contact-detail-row">
+        <span class="contact-detail-label">Contact information</span>
+        <span class="contact-detail-value">${escapeHtml(savedValue)}</span>
+      </p>
+    `
+    : `<p class="contact-empty">You haven't shared contact details yet.</p>`;
 
   return `
-    <div class="contact-section" data-role="${role}">
-      <h4 class="contact-heading">Contact Details</h4>
-      ${status === "loading" ? `<p class="contact-loading">Loading contact details…</p>` : ""}
-      ${otherLine}
+    <div class="contact-party contact-party-own">
+      <h5 class="contact-party-heading">My Contact Details</h5>
+      ${savedReadout}
       <form class="contact-form" data-post-id="${post.id}" data-application-id="${applicationId ?? ""}" data-role="${role}">
         <label class="contact-field">
           Preferred contact method
@@ -126,6 +161,41 @@ function renderContactSection(post, { applicationId, role }, contactState) {
         ${status === "error" ? `<p class="contact-error" role="alert">${escapeHtml(errorMessage ?? "Could not save — please try again.")}</p>` : ""}
         ${status === "success" ? `<p class="contact-success" role="status">Saved.</p>` : ""}
       </form>
+    </div>
+  `;
+}
+
+// Renders the full Contact Details section for one accepted/completed
+// application, with "Other Participant's Contact" and "My Contact Details"
+// as two clearly separated sub-panels — the same two sub-panels, same
+// markup, whether this is the post owner's view (inside Manage Applicants,
+// on a community page or in My Posts) or the applicant's own view (on their
+// card, in My Activity). The access check already happened server-side by
+// the time this data exists at all (src/routes/contacts.ts); this is pure
+// presentation, same as renderApplicantPanel.
+//
+// `role` ("owner" | "applicant") changes which endpoint the form saves to,
+// which state-map key is read, and which name/role label describes "the
+// other participant" — nothing else differs. The owner's save targets one
+// specific application (postId + applicationId, one contact exchange per
+// accepted applicant); the applicant's save targets their own application on
+// this post (postId alone — the same "no application id in the URL" shape
+// src/routes/applications.ts's requestCancellation already uses, since a
+// visitor can only ever have one application per post).
+function renderContactSection(post, { applicationId, role, otherParticipantName }, contactState) {
+  const key = role === "owner" ? `owner:${applicationId}` : `applicant:${post.id}`;
+  const state = contactState?.get(key) ?? {};
+  const { own, other } = state.contacts ?? { own: null, other: null };
+  const status = state.status; // undefined | 'loading' | 'saving' | 'error' | 'success'
+  const errorMessage = state.error;
+  const otherRoleLabel = OTHER_PARTICIPANT_ROLE_LABEL[role];
+
+  return `
+    <div class="contact-section" data-role="${role}">
+      <h4 class="contact-heading">Contact Details</h4>
+      ${status === "loading" ? `<p class="contact-loading">Loading contact details…</p>` : ""}
+      ${renderOtherParticipantContact(other, { otherParticipantName, otherRoleLabel })}
+      ${renderMyContact(post, { applicationId, role }, own, { status, errorMessage })}
     </div>
   `;
 }
@@ -162,7 +232,7 @@ function renderApplicantPanel(post, { expandedApplicantPosts, applicantsCache, c
                   ? `<p class="cancellation-note">Requested cancellation${a.cancellationReason ? `: “${escapeHtml(a.cancellationReason)}”` : ""}</p>`
                   : ""
               }
-              ${CONTACT_UNLOCKED_STATUSES.has(a.status) ? renderContactSection(post, { applicationId: a.id, role: "owner" }, contactState) : ""}
+              ${CONTACT_UNLOCKED_STATUSES.has(a.status) ? renderContactSection(post, { applicationId: a.id, role: "owner", otherParticipantName: a.applicantName }, contactState) : ""}
             </li>
           `,
             )
@@ -216,7 +286,7 @@ function renderPostCard(post, { expandedApplicantPosts, applicantsCache, cardMes
   const myMessage = !post.isOwnPost && post.appliedByMe && post.myApplicationMessage;
   const myContactSection =
     !post.isOwnPost && post.appliedByMe && CONTACT_UNLOCKED_STATUSES.has(post.myApplicationStatus)
-      ? renderContactSection(post, { role: "applicant" }, contactState)
+      ? renderContactSection(post, { role: "applicant", otherParticipantName: post.authorName }, contactState)
       : "";
 
   return `
@@ -404,6 +474,57 @@ function attachFeedInteractions(containerEl, ctx) {
         ctx.rerender();
       }
     }
+  });
+
+  // Copies the other participant's shared contact value to the clipboard.
+  // navigator.clipboard.writeText can be unavailable (no secure-context
+  // support, an older browser, a jsdom test environment with no clipboard
+  // API at all) or simply denied (permission refused, a sandboxed embed) —
+  // either way this falls back to a hidden textarea + document.execCommand
+  // rather than leaving the button silently broken. execCommand itself can
+  // also fail without throwing (it returns false rather than rejecting), so
+  // that return value has to be checked explicitly too.
+  containerEl.addEventListener("click", async (e) => {
+    const copyBtn = e.target.closest(".copy-contact-btn");
+    if (!copyBtn) return;
+
+    const value = copyBtn.dataset.copyValue ?? "";
+    const originalLabel = copyBtn.textContent;
+
+    function copyWithExecCommand(text) {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(textarea);
+      if (!ok) throw new Error("execCommand('copy') was unsuccessful");
+    }
+
+    async function copyText(text) {
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return;
+        } catch {
+          // Falls through to the execCommand fallback below — some
+          // environments expose the API but still refuse to use it.
+        }
+      }
+      copyWithExecCommand(text);
+    }
+
+    try {
+      await copyText(value);
+      copyBtn.textContent = "Copied!";
+    } catch {
+      copyBtn.textContent = "Couldn't copy";
+    }
+    setTimeout(() => {
+      copyBtn.textContent = originalLabel;
+    }, 1500);
   });
 
   // Feature 2: saving either side's Contact Details. One listener covers

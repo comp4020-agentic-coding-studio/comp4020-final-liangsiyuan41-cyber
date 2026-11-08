@@ -55,6 +55,119 @@ function escapeHtml(s) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 }
 
+// V1.2: Like and Comment icons — simple, recognisable shapes (a heart, a
+// speech bubble) rather than anything novel, matching the existing icon
+// style (currentColor stroke, no fill) used throughout the app.
+const HEART_ICON_SVG =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5s-7.5-4.6-10-9.2C.5 8 1.8 4.5 5 3.5c2-.6 4 .2 5 2 .2.3.5.3.7 0 1-1.8 3-2.6 5-2 3.2 1 4.5 4.5 3 7.8-2.5 4.6-10 9.2-10 9.2Z"/></svg>';
+const COMMENT_ICON_SVG =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5h16a1 1 0 0 1 1 1V16a1 1 0 0 1-1 1H9l-4.5 4V17H4a1 1 0 0 1-1-1V5.5a1 1 0 0 1 1-1Z"/></svg>';
+
+// Renders the Like button and the like count, and the Comment toggle with
+// the comment count — the two public, reaction-style controls every post
+// card gets, regardless of category (V1.2 requires these consistently
+// across all four communities, unlike applicant management/contact
+// exchange which only ever render for the post's own participants).
+function renderLikeAndCommentControls(post, { expandedCommentPosts }) {
+  const likeBtnClass = post.likedByMe ? "like-btn liked" : "like-btn";
+  const commentsOpen = expandedCommentPosts?.has(post.id) ?? false;
+
+  return `
+    <div class="post-card-reactions">
+      <button
+        type="button"
+        class="${likeBtnClass}"
+        data-post-id="${post.id}"
+        aria-pressed="${post.likedByMe ? "true" : "false"}"
+        aria-label="${post.likedByMe ? "Unlike this post" : "Like this post"}"
+      >
+        <span class="reaction-icon" aria-hidden="true">${HEART_ICON_SVG}</span>
+        <span class="reaction-count">${post.likeCount}</span>
+      </button>
+      <button
+        type="button"
+        class="comment-toggle-btn"
+        data-post-id="${post.id}"
+        aria-expanded="${commentsOpen}"
+      >
+        <span class="reaction-icon" aria-hidden="true">${COMMENT_ICON_SVG}</span>
+        <span class="reaction-count">${post.commentCount}</span>
+      </button>
+    </div>
+  `;
+}
+
+function formatCommentTime(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
+// Renders one comment row: author name, timestamp, message, and a Delete
+// control only when the server has already told us (via isOwnComment) that
+// this viewer wrote it — the delete endpoint re-checks this itself, so the
+// button being absent here is a convenience, not the actual access control
+// (see src/routes/comments.ts's deleteComment).
+function renderCommentRow(post, comment) {
+  return `
+    <li class="comment-row" data-comment-id="${comment.id}">
+      <div class="comment-row-main">
+        <span class="comment-author">${escapeHtml(comment.authorName)}</span>
+        <span class="comment-time">${formatCommentTime(comment.createdAt)}</span>
+        ${
+          comment.isOwnComment
+            ? `<button type="button" class="comment-delete-btn" data-post-id="${post.id}" data-comment-id="${comment.id}">Delete</button>`
+            : ""
+        }
+      </div>
+      <p class="comment-message">${escapeHtml(comment.message)}</p>
+    </li>
+  `;
+}
+
+// The Comments panel: a plain, public, chronological list plus a small
+// name+message form. Visually and structurally distinct from the private
+// "Message" line applicants attach when applying (.application-message,
+// shown only to the post owner and that one applicant) — comments live in
+// their own bordered section with their own heading, are visible to every
+// visitor, and use a completely separate API/table
+// (post_comments vs. applications.message).
+function renderCommentsPanel(post, { expandedCommentPosts, commentsCache, commentMessages }) {
+  const isOpen = expandedCommentPosts?.has(post.id) ?? false;
+  if (!isOpen) return "";
+
+  const comments = commentsCache?.get(post.id);
+  const feedbackMessage = commentMessages?.get(post.id);
+
+  let body;
+  if (!comments) {
+    body = `<p class="comments-status">Loading…</p>`;
+  } else if (comments.length === 0) {
+    body = `<p class="comments-status">No comments yet — be the first to say something.</p>`;
+  } else {
+    body = `<ul class="comment-list">${comments.map((c) => renderCommentRow(post, c)).join("")}</ul>`;
+  }
+
+  return `
+    <div class="comments-panel">
+      <h4 class="comments-heading">Comments</h4>
+      ${body}
+      ${feedbackMessage ? `<p class="comment-feedback" role="alert">${escapeHtml(feedbackMessage)}</p>` : ""}
+      <form class="comment-form" data-post-id="${post.id}">
+        <label class="comment-field">
+          Your name
+          <input type="text" name="authorName" maxlength="80" required />
+        </label>
+        <label class="comment-field">
+          Comment
+          <textarea name="message" maxlength="500" rows="2" required></textarea>
+        </label>
+        <button type="submit" class="post-comment-btn">Post Comment</button>
+      </form>
+    </div>
+  `;
+}
+
 function renderApplicantActions(post, a) {
   if (a.status === "pending") {
     return `
@@ -268,7 +381,15 @@ function renderApplicantPanel(post, { expandedApplicantPosts, applicantsCache, c
 // `contactState` is shared with renderApplicantPanel (and passed through to
 // renderContactSection below) — the applicant's own Contact Details section
 // renders here, on their own card, once their application is accepted.
-function renderPostCard(post, { expandedApplicantPosts, applicantsCache, cardMessages, contactState }) {
+//
+// `expandedCommentPosts`/`commentsCache`/`commentMessages` are V1.2's
+// equivalents of the applicant panel's own expandedApplicantPosts/
+// applicantsCache/cardMessages — same lazy-expand-and-cache shape, just for
+// the public Comments panel every post (not only the author's) can open.
+function renderPostCard(
+  post,
+  { expandedApplicantPosts, applicantsCache, cardMessages, contactState, expandedCommentPosts, commentsCache, commentMessages },
+) {
   const priceLabel = post.isPaid ? `Paid${post.amount ? ` · ${escapeHtml(post.amount)}` : ""}` : "Free";
   const statusBadge = `<span class="badge applied status-${post.myApplicationStatus}">${STATUS_LABELS[post.myApplicationStatus] ?? "Applied"}</span>`;
   const requestCancellationBtn = `<button type="button" class="request-cancellation-btn" data-post-id="${post.id}">Request Cancellation</button>`;
@@ -307,6 +428,8 @@ function renderPostCard(post, { expandedApplicantPosts, applicantsCache, cardMes
       </div>
       ${myContactSection}
       ${message ? `<p class="post-card-message" role="status">${escapeHtml(message)}</p>` : ""}
+      ${renderLikeAndCommentControls(post, { expandedCommentPosts })}
+      ${renderCommentsPanel(post, { expandedCommentPosts, commentsCache, commentMessages })}
       ${renderApplicantPanel(post, { expandedApplicantPosts, applicantsCache, contactState })}
     </li>
   `;
@@ -355,6 +478,28 @@ function attachFeedInteractions(containerEl, ctx) {
     if (!ctx.cardMessages) return;
     if (message) ctx.cardMessages.set(postId, message);
     else ctx.cardMessages.delete(postId);
+  }
+
+  // V1.2: loads (or reloads) one post's comment list. Called when a
+  // Comments panel is first opened, and again after posting/deleting a
+  // comment — the same "re-fetch the authoritative list" discipline the
+  // rest of this app already follows rather than trusting an optimistic
+  // local edit (see ADR-0001).
+  async function loadComments(postId) {
+    if (!ctx.commentsCache) return;
+    try {
+      const res = await fetch(`/api/posts/${postId}/comments`);
+      ctx.commentsCache.set(postId, res.ok ? await res.json() : []);
+    } catch {
+      ctx.commentsCache.set(postId, []);
+    }
+  }
+  ctx.loadComments = loadComments;
+
+  function setCommentMessage(postId, message) {
+    if (!ctx.commentMessages) return;
+    if (message) ctx.commentMessages.set(postId, message);
+    else ctx.commentMessages.delete(postId);
   }
 
   containerEl.addEventListener("click", async (e) => {
@@ -477,6 +622,76 @@ function attachFeedInteractions(containerEl, ctx) {
   });
 
   // Copies the other participant's shared contact value to the clipboard.
+  // V1.2: Like / Unlike toggle. The button already reflects the server's
+  // view of likedByMe (set on the last GET /api/posts), so a click always
+  // means "do the opposite of what's currently shown" — the server is still
+  // the one deciding what "currently" means for this session, not a locally
+  // tracked boolean that could drift from it.
+  containerEl.addEventListener("click", async (e) => {
+    const likeBtn = e.target.closest(".like-btn");
+    if (!likeBtn) return;
+
+    const postId = Number(likeBtn.dataset.postId);
+    const currentlyLiked = likeBtn.classList.contains("liked");
+    likeBtn.disabled = true;
+
+    try {
+      const res = await fetch(`/api/posts/${postId}/like`, { method: currentlyLiked ? "DELETE" : "POST" });
+      if (res.ok) {
+        await ctx.reload();
+        return;
+      }
+    } catch {
+      // Falls through to re-enable below; the button's state is unchanged
+      // since the request never succeeded.
+    }
+    likeBtn.disabled = false;
+  });
+
+  // V1.2: expands/collapses a post's public Comments panel, lazily loading
+  // the comment list the first time it's opened — same shape as the
+  // Manage Applicants toggle just above.
+  containerEl.addEventListener("click", async (e) => {
+    const toggleBtn = e.target.closest(".comment-toggle-btn");
+    if (!toggleBtn || !ctx.expandedCommentPosts) return;
+
+    const postId = Number(toggleBtn.dataset.postId);
+    if (ctx.expandedCommentPosts.has(postId)) {
+      ctx.expandedCommentPosts.delete(postId);
+      ctx.rerender();
+      return;
+    }
+    ctx.expandedCommentPosts.add(postId);
+    ctx.rerender();
+    await loadComments(postId);
+    ctx.rerender();
+  });
+
+  // V1.2: deleting one's own comment. The server re-checks ownership itself
+  // (src/routes/comments.ts's deleteComment) — this button only ever
+  // renders for a comment the last GET already told us is ours, but a
+  // crafted request against the endpoint still can't delete anyone else's.
+  containerEl.addEventListener("click", async (e) => {
+    const deleteBtn = e.target.closest(".comment-delete-btn");
+    if (!deleteBtn) return;
+
+    const { postId, commentId } = deleteBtn.dataset;
+    deleteBtn.disabled = true;
+    try {
+      const res = await fetch(`/api/posts/${postId}/comments/${commentId}`, { method: "DELETE" });
+      if (res.ok) {
+        await loadComments(Number(postId));
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setCommentMessage(Number(postId), body.error ?? "Could not delete — please try again.");
+      }
+    } catch {
+      setCommentMessage(Number(postId), "Network error — comment was not deleted.");
+    } finally {
+      ctx.rerender();
+    }
+  });
+
   // navigator.clipboard.writeText can be unavailable (no secure-context
   // support, an older browser, a jsdom test environment with no clipboard
   // API at all) or simply denied (permission refused, a sandboxed embed) —
@@ -573,6 +788,46 @@ function attachFeedInteractions(containerEl, ctx) {
       ctx.rerender();
     }
   });
+
+  // V1.2: posting a new public comment. Unlike applying (which prompts for
+  // a name/message), this is a small inline form — comments are expected to
+  // be quick and frequent, where a blocking dialog every time would be
+  // worse than a form that just sits there once the panel is open.
+  containerEl.addEventListener("submit", async (e) => {
+    const form = e.target.closest(".comment-form");
+    if (!form) return;
+    e.preventDefault();
+
+    const postId = Number(form.dataset.postId);
+    const authorName = form.elements.authorName.value.trim();
+    const message = form.elements.message.value.trim();
+    if (!authorName || !message) return;
+
+    const submitBtn = form.querySelector(".post-comment-btn");
+    submitBtn.disabled = true;
+    setCommentMessage(postId, null);
+
+    try {
+      const res = await fetch(`/api/posts/${postId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ authorName, message }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setCommentMessage(postId, body.error ?? "Could not post comment — please try again.");
+        submitBtn.disabled = false;
+        ctx.rerender();
+        return;
+      }
+      await loadComments(postId);
+      ctx.rerender();
+    } catch {
+      setCommentMessage(postId, "Network error — your comment was not posted.");
+      submitBtn.disabled = false;
+      ctx.rerender();
+    }
+  });
 }
 
 // Fetches the contact exchange for every post/application that currently has
@@ -615,6 +870,30 @@ async function refreshContactState(posts, { expandedApplicantPosts, contactState
       } catch {
         // Same as above.
       }
+    }
+  }
+}
+
+// V1.2: keeps any currently-open Comments panel in sync with the server —
+// the same re-fetch-on-signal shape as refreshOpenApplicantPanels in
+// app.js/my-activity.js, since comment:created/comment:deleted broadcast
+// only a postId (see src/routes/comments.ts), never the comment list
+// itself. Any post can have its panel open (unlike applicant management,
+// which only ever opens for the post's own author), so this isn't scoped
+// to isOwnPost the way refreshContactState's owner half is.
+async function refreshOpenCommentPanels(posts, { expandedCommentPosts, commentsCache }) {
+  const postIds = new Set(posts.map((p) => p.id));
+  for (const postId of expandedCommentPosts) {
+    if (!postIds.has(postId)) {
+      expandedCommentPosts.delete(postId);
+      commentsCache.delete(postId);
+      continue;
+    }
+    try {
+      const res = await fetch(`/api/posts/${postId}/comments`);
+      commentsCache.set(postId, res.ok ? await res.json() : []);
+    } catch {
+      // Leave whatever was already cached; the next refresh retries.
     }
   }
 }

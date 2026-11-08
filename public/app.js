@@ -31,6 +31,13 @@ const cardMessages = new Map();
 // "owner:<applicationId>" or "applicant:<postId>" — see post-card.js's
 // renderContactSection and refreshContactState.
 const contactState = new Map();
+// V1.2: which posts' Comments panels are open, their cached comment lists,
+// and any transient post/delete feedback — same lazy-expand-and-cache shape
+// as the applicant panel above, but not scoped to isOwnPost (any visitor
+// can open any post's comments).
+const expandedCommentPosts = new Set();
+const commentsCache = new Map();
+const commentMessages = new Map();
 
 function renderFeed() {
   if (!feedEl) return;
@@ -39,7 +46,17 @@ function renderFeed() {
   if (LATEST_LIMIT) visible = visible.slice(0, LATEST_LIMIT);
 
   feedEl.innerHTML = visible
-    .map((post) => renderPostCard(post, { expandedApplicantPosts, applicantsCache, cardMessages, contactState }))
+    .map((post) =>
+      renderPostCard(post, {
+        expandedApplicantPosts,
+        applicantsCache,
+        cardMessages,
+        contactState,
+        expandedCommentPosts,
+        commentsCache,
+        commentMessages,
+      }),
+    )
     .join("");
 
   if (feedEmptyEl) feedEmptyEl.hidden = visible.length > 0;
@@ -85,6 +102,7 @@ async function refreshOpenApplicantPanels() {
     await loadApplicants(postId);
   }
   await refreshContactState(posts, { expandedApplicantPosts, contactState });
+  await refreshOpenCommentPanels(posts, { expandedCommentPosts, commentsCache });
   renderFeed();
 }
 
@@ -94,6 +112,9 @@ if (feedEl) {
     applicantsCache,
     cardMessages,
     contactState,
+    expandedCommentPosts,
+    commentsCache,
+    commentMessages,
     reload: loadPosts,
     rerender: renderFeed,
     getDefaultApplicantName: () => myDisplayName ?? "",
@@ -122,6 +143,19 @@ function connectEvents() {
   source.addEventListener("application:status", () => {
     loadPosts();
     flashLive("Application status updated");
+  });
+
+  source.addEventListener("post:liked", () => {
+    loadPosts();
+  });
+
+  source.addEventListener("comment:created", () => {
+    loadPosts();
+    flashLive("New comment");
+  });
+
+  source.addEventListener("comment:deleted", () => {
+    loadPosts();
   });
 
   // On any drop (network blip, server restart) EventSource reconnects on

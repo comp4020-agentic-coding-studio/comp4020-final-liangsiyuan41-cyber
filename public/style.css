@@ -543,6 +543,212 @@ button[type="submit"]:hover,
   flex: 1;
 }
 
+/* V1.2: Like / Comment reaction row. A quiet, secondary row below the main
+   footer (author/applicant-count/apply), using the same muted palette as
+   the rest of the card's metadata rather than drawing extra attention —
+   "clear and easy to use" without competing with the primary Apply action. */
+.post-card-reactions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border);
+}
+
+.like-btn,
+.comment-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.like-btn:hover:not(:disabled),
+.comment-toggle-btn:hover {
+  background: var(--blue-tint);
+  color: var(--blue);
+  border-color: var(--blue);
+}
+
+.like-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* A liked post's heart fills solid red rather than just changing the
+   button's own colour, so "liked" reads at a glance the same way a
+   familiar social-app like button does. */
+.like-btn.liked {
+  color: #c0392b;
+  border-color: #f0c3c3;
+  background: #fdf0f0;
+}
+
+.like-btn.liked .reaction-icon svg {
+  fill: currentColor;
+}
+
+.reaction-icon {
+  display: inline-flex;
+  width: 1rem;
+  height: 1rem;
+}
+
+.reaction-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.reaction-count {
+  min-width: 1ch;
+}
+
+/* V1.2: the public Comments panel — visually and structurally its own
+   bordered section (not just another line in the card), distinguishing it
+   clearly from the private application .message line above it, which
+   belongs to the applicant/owner pair, not the whole community. */
+.comments-panel {
+  margin-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+.comments-heading {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: var(--blue);
+}
+
+.comments-status {
+  margin: 0 0 0.5rem;
+  color: #777;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.comment-list {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.comment-row {
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  background: var(--bg);
+}
+
+.comment-row-main {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.25rem;
+}
+
+.comment-author {
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.comment-time {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  flex: 1;
+}
+
+.comment-delete-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #a33a3a;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.comment-delete-btn:hover:not(:disabled) {
+  color: #7a2a2a;
+}
+
+.comment-delete-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.comment-message {
+  margin: 0;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.comment-feedback {
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+  color: #a33a3a;
+}
+
+.comment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.comment-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.comment-field input,
+.comment-field textarea {
+  font: inherit;
+  padding: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  resize: vertical;
+}
+
+.post-comment-btn {
+  align-self: flex-start;
+  background: var(--blue);
+  color: white;
+  border: none;
+  border-radius: 0.35rem;
+  padding: 0.4rem 0.9rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.post-comment-btn:hover:not(:disabled) {
+  background: var(--blue-dark);
+}
+
+.post-comment-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .badge {
   font-size: 0.8rem;
   padding: 0.3rem 0.75rem;
@@ -1013,7 +1219,12 @@ button[type="submit"]:hover,
   .contact-field select,
   .contact-field input,
   .save-contact-btn,
-  .copy-contact-btn {
+  .copy-contact-btn,
+  .like-btn,
+  .comment-toggle-btn,
+  .comment-field input,
+  .comment-field textarea,
+  .post-comment-btn {
     min-height: 2.75rem;
   }
 
@@ -1021,6 +1232,13 @@ button[type="submit"]:hover,
      so it stacks, with Copy left-aligned under the value instead of
      squeezed onto the same row. */
   .contact-detail-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* Author/timestamp/Delete can't all fit one line at phone width either —
+     same reasoning as .contact-detail-row above. */
+  .comment-row-main {
     flex-direction: column;
     align-items: flex-start;
   }

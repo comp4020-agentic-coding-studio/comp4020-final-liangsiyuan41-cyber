@@ -25,17 +25,30 @@ let hasLoadedOnce = false;
 // <postId>" (post-card.js), and a post never appears in both sections at
 // once, so there's no risk of the two colliding.
 const contactState = new Map();
+// V1.2: Comments panel state is likewise shared across both sections — any
+// post can be commented on regardless of which section shows it, and a post
+// only ever appears in one section at a time, so there's no risk of the two
+// colliding (same reasoning as contactState above).
+const expandedCommentPosts = new Set();
+const commentsCache = new Map();
+const commentMessages = new Map();
 const postsPanelState = {
   expandedApplicantPosts: new Set(),
   applicantsCache: new Map(),
   cardMessages: new Map(),
   contactState,
+  expandedCommentPosts,
+  commentsCache,
+  commentMessages,
 };
 const applicationsPanelState = {
   expandedApplicantPosts: new Set(),
   applicantsCache: new Map(),
   cardMessages: new Map(),
   contactState,
+  expandedCommentPosts,
+  commentsCache,
+  commentMessages,
 };
 
 function renderSection(feedEl, emptyEl, visiblePosts, panelState) {
@@ -70,6 +83,7 @@ async function refreshOpenApplicantPanels() {
   // only one that matters for the owner side of refreshContactState; the
   // applicant side checks appliedByMe/status directly, not expansion.
   await refreshContactState(posts, { expandedApplicantPosts: postsPanelState.expandedApplicantPosts, contactState });
+  await refreshOpenCommentPanels(posts, { expandedCommentPosts, commentsCache });
   renderAll();
 }
 
@@ -114,6 +128,9 @@ function connectEvents() {
   source.addEventListener("post:created", loadPosts);
   source.addEventListener("application:count", loadPosts);
   source.addEventListener("application:status", loadPosts);
+  source.addEventListener("post:liked", loadPosts);
+  source.addEventListener("comment:created", loadPosts);
+  source.addEventListener("comment:deleted", loadPosts);
   source.addEventListener("open", loadPosts);
 }
 

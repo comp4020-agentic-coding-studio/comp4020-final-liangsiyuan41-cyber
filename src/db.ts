@@ -153,3 +153,33 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_contact_details_application_id ON contact_details(application_id);
 `);
+
+// V1.2: likes and comments, both new tables — purely additive, no existing
+// table is touched. Likes dedup the same way applications already does
+// (UNIQUE(post_id, session_id), enforced by SQLite itself rather than
+// check-then-write application logic — see docs/adr-0001-…md on why that's
+// what's actually load bearing under concurrent requests, not a pre-check).
+// Comments have no UNIQUE constraint: a visitor may post as many comments as
+// they like (rate-limited in src/routes/comments.ts, not by the schema).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS post_likes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER NOT NULL REFERENCES posts(id),
+    session_id TEXT NOT NULL REFERENCES sessions(id),
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    UNIQUE (post_id, session_id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_post_likes_post_id ON post_likes(post_id);
+
+  CREATE TABLE IF NOT EXISTS post_comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER NOT NULL REFERENCES posts(id),
+    author_session_id TEXT NOT NULL REFERENCES sessions(id),
+    author_name TEXT NOT NULL,
+    message TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_post_comments_post_id ON post_comments(post_id);
+`);

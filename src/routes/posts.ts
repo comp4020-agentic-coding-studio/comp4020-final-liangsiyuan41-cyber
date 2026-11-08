@@ -18,13 +18,23 @@ interface PostRow {
   created_at: string;
 }
 
+// V1.2: like_count and liked_by_me are scalar subqueries, not a second
+// LEFT JOIN alongside applications — joining two one-to-many tables (likes
+// and applications) onto posts in a single query would cross-multiply their
+// rows (N applications x M likes = N*M joined rows), corrupting both
+// COUNT(a.id) and a like count computed the same way. Subqueries sidestep
+// that entirely: each is evaluated once per post, independent of how many
+// applications or likes that post has.
 const listPostsStmt = db.prepare(`
   SELECT p.*,
     COUNT(a.id) AS application_count,
     MAX(CASE WHEN a.applicant_session_id = ? THEN 1 ELSE 0 END) AS applied_by_me,
     MAX(CASE WHEN a.applicant_session_id = ? THEN a.status ELSE NULL END) AS my_application_status,
     MAX(CASE WHEN a.applicant_session_id = ? THEN a.cancellation_requested ELSE 0 END) AS my_cancellation_requested,
-    MAX(CASE WHEN a.applicant_session_id = ? THEN a.message ELSE NULL END) AS my_application_message
+    MAX(CASE WHEN a.applicant_session_id = ? THEN a.message ELSE NULL END) AS my_application_message,
+    (SELECT COUNT(*) FROM post_likes l WHERE l.post_id = p.id) AS like_count,
+    (SELECT COUNT(*) FROM post_likes l WHERE l.post_id = p.id AND l.session_id = ?) AS liked_by_me,
+    (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id) AS comment_count
   FROM posts p
   LEFT JOIN applications a ON a.post_id = p.id
   GROUP BY p.id
@@ -45,6 +55,9 @@ function serialisePost(
     my_application_status?: string | null;
     my_cancellation_requested?: number;
     my_application_message?: string | null;
+    like_count?: number;
+    liked_by_me?: number;
+    comment_count?: number;
   },
   sessionId: string,
 ) {
@@ -67,16 +80,32 @@ function serialisePost(
     // src/routes/applications.ts's listApplicants for the author-only view
     // of every applicant's message).
     myApplicationMessage: row.my_application_message ?? null,
+    // V1.2: likes and comments are public, unlike the application fields
+    // above — every viewer sees the same likeCount/commentCount, and
+    // likedByMe is the only part that's per-viewer (same shape as
+    // appliedByMe).
+    likeCount: row.like_count ?? 0,
+    likedByMe: Boolean(row.liked_by_me),
+    commentCount: row.comment_count ?? 0,
   };
 }
 
 export function listPosts(_req: IncomingMessage, res: ServerResponse, session: Session): void {
-  const rows = listPostsStmt.all(session.id, session.id, session.id, session.id) as unknown as (PostRow & {
+  const rows = listPostsStmt.all(
+    session.id,
+    session.id,
+    session.id,
+    session.id,
+    session.id,
+  ) as unknown as (PostRow & {
     application_count: number;
     applied_by_me: number;
     my_application_status: string | null;
     my_cancellation_requested: number;
     my_application_message: string | null;
+    like_count: number;
+    liked_by_me: number;
+    comment_count: number;
   })[];
   res.writeHead(200, { "Content-Type": "application/json" });
   res.end(JSON.stringify(rows.map((row) => serialisePost(row, session.id))));

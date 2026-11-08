@@ -7,6 +7,8 @@ import { addClient } from "./events.ts";
 import { listPosts, createPost } from "./routes/posts.ts";
 import { applyToPost, listApplicants, setApplicationStatus, requestCancellation } from "./routes/applications.ts";
 import { getOwnerContacts, saveOwnerContact, getApplicantContact, saveApplicantContact } from "./routes/contacts.ts";
+import { likePost, unlikePost } from "./routes/likes.ts";
+import { listComments, createComment, deleteComment } from "./routes/comments.ts";
 import { whoami } from "./routes/whoami.ts";
 import { renderReadmePage } from "./readme.ts";
 
@@ -151,6 +153,41 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
   if (myContactMatch && req.method === "PUT") {
     const session = resolveSession(req, res);
     await saveApplicantContact(req, res, session, Number(myContactMatch[1]));
+    return;
+  }
+
+  // V1.2: likes (public, session-deduped) and comments (public, flat,
+  // author-deletable-only). Neither needs an ownership check against the
+  // post's author the way applicant management does — liking/commenting is
+  // open to any visitor, including the post's own author.
+  const likeMatch = pathname.match(/^\/api\/posts\/(\d+)\/like$/);
+  if (likeMatch && req.method === "POST") {
+    const session = resolveSession(req, res);
+    likePost(res, session, Number(likeMatch[1]));
+    return;
+  }
+  if (likeMatch && req.method === "DELETE") {
+    const session = resolveSession(req, res);
+    unlikePost(res, session, Number(likeMatch[1]));
+    return;
+  }
+
+  const commentsMatch = pathname.match(/^\/api\/posts\/(\d+)\/comments$/);
+  if (commentsMatch && req.method === "GET") {
+    const session = resolveSession(req, res);
+    listComments(res, session, Number(commentsMatch[1]));
+    return;
+  }
+  if (commentsMatch && req.method === "POST") {
+    const session = resolveSession(req, res);
+    await createComment(req, res, session, Number(commentsMatch[1]));
+    return;
+  }
+
+  const commentDeleteMatch = pathname.match(/^\/api\/posts\/(\d+)\/comments\/(\d+)$/);
+  if (commentDeleteMatch && req.method === "DELETE") {
+    const session = resolveSession(req, res);
+    deleteComment(res, session, Number(commentDeleteMatch[1]), Number(commentDeleteMatch[2]));
     return;
   }
 

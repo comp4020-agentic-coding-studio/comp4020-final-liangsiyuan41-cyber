@@ -20,12 +20,22 @@ let hasLoadedOnce = false;
 // Each section gets its own applicant-panel state — a panel opened in "My
 // Posts" shouldn't affect "My Applications" (which never shows one anyway,
 // since renderApplicantPanel only renders for isOwnPost rows, but keeping
-// the state separate avoids any cross-section coupling).
-const postsPanelState = { expandedApplicantPosts: new Set(), applicantsCache: new Map(), cardMessages: new Map() };
+// the state separate avoids any cross-section coupling). contactState is
+// shared: its keys are namespaced "owner:<applicationId>" / "applicant:
+// <postId>" (post-card.js), and a post never appears in both sections at
+// once, so there's no risk of the two colliding.
+const contactState = new Map();
+const postsPanelState = {
+  expandedApplicantPosts: new Set(),
+  applicantsCache: new Map(),
+  cardMessages: new Map(),
+  contactState,
+};
 const applicationsPanelState = {
   expandedApplicantPosts: new Set(),
   applicantsCache: new Map(),
   cardMessages: new Map(),
+  contactState,
 };
 
 function renderSection(feedEl, emptyEl, visiblePosts, panelState) {
@@ -54,6 +64,12 @@ async function refreshOpenApplicantPanels() {
       panelState.applicantsCache.set(postId, res.ok ? await res.json() : []);
     }
   }
+  // My Posts' expandedApplicantPosts is the only one that can ever hold an
+  // id (My Applications never renders a Manage Applicants toggle — that
+  // section is for posts the visitor applied to, not owns), so it's the
+  // only one that matters for the owner side of refreshContactState; the
+  // applicant side checks appliedByMe/status directly, not expansion.
+  await refreshContactState(posts, { expandedApplicantPosts: postsPanelState.expandedApplicantPosts, contactState });
   renderAll();
 }
 

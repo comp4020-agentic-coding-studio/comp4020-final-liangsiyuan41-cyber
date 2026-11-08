@@ -27,6 +27,10 @@ const applicantsCache = new Map();
 // Transient per-card error/feedback text (e.g. "Network error — your
 // application was not sent."); see post-card.js's renderPostCard.
 const cardMessages = new Map();
+// V1.1: the Contact Details read/save state per contact exchange, keyed
+// "owner:<applicationId>" or "applicant:<postId>" — see post-card.js's
+// renderContactSection and refreshContactState.
+const contactState = new Map();
 
 function renderFeed() {
   if (!feedEl) return;
@@ -35,7 +39,7 @@ function renderFeed() {
   if (LATEST_LIMIT) visible = visible.slice(0, LATEST_LIMIT);
 
   feedEl.innerHTML = visible
-    .map((post) => renderPostCard(post, { expandedApplicantPosts, applicantsCache, cardMessages }))
+    .map((post) => renderPostCard(post, { expandedApplicantPosts, applicantsCache, cardMessages, contactState }))
     .join("");
 
   if (feedEmptyEl) feedEmptyEl.hidden = visible.length > 0;
@@ -80,6 +84,7 @@ async function refreshOpenApplicantPanels() {
     }
     await loadApplicants(postId);
   }
+  await refreshContactState(posts, { expandedApplicantPosts, contactState });
   renderFeed();
 }
 
@@ -88,6 +93,7 @@ if (feedEl) {
     expandedApplicantPosts,
     applicantsCache,
     cardMessages,
+    contactState,
     reload: loadPosts,
     rerender: renderFeed,
     getDefaultApplicantName: () => myDisplayName ?? "",

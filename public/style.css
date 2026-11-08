@@ -657,6 +657,108 @@ button[type="submit"]:hover,
   font-style: italic;
 }
 
+/* V1.1 Feature 1: the optional message an applicant attaches. Shown inline
+   wherever the applicant's name/status already shows, on both the owner's
+   applicant row and the applicant's own card. */
+.application-message {
+  margin: 0.4rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+/* V1.1 Feature 2: Contact Details. Visually a step down from the card/row it
+   sits in (a tinted sub-panel), since it's optional and secondary to the
+   main status/actions above it, but still clearly part of the same card —
+   not a separate floating box. */
+.contact-section {
+  margin-top: 0.6rem;
+  padding: 0.65rem 0.75rem;
+  background: var(--blue-tint);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
+
+.contact-heading {
+  margin: 0 0 0.4rem;
+  font-size: 0.85rem;
+  color: var(--blue);
+}
+
+.contact-loading {
+  margin: 0 0 0.4rem;
+  font-size: 0.8rem;
+  color: #777;
+  font-style: italic;
+}
+
+.contact-shared {
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+}
+
+.contact-empty {
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+  color: #777;
+  font-style: italic;
+}
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.contact-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.contact-field select,
+.contact-field input {
+  font: inherit;
+  padding: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+}
+
+.save-contact-btn {
+  align-self: flex-start;
+  background: var(--blue);
+  color: white;
+  border: none;
+  border-radius: 0.35rem;
+  padding: 0.4rem 0.9rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.save-contact-btn:hover:not(:disabled) {
+  background: var(--blue-dark);
+}
+
+.save-contact-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.contact-error {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #a33a3a;
+}
+
+.contact-success {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #2a6b2a;
+}
+
 .applicant-name {
   font-weight: 600;
   flex: 1;
@@ -792,7 +894,10 @@ button[type="submit"]:hover,
   .request-cancellation-btn,
   .applicants-toggle,
   .decide-btn,
-  .tab {
+  .tab,
+  .contact-field select,
+  .contact-field input,
+  .save-contact-btn {
     min-height: 2.75rem;
   }
 }

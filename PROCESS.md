@@ -32,7 +32,7 @@ Rather than asking AI to build everything at once, I repeatedly reviewed the wor
 
 One important decision concerned multiple students applying to the same post.
 
-A first-come, first-served system would have been simple but unsuitable for study groups or campus activities involving several participants. I therefore allowed multiple applicants while preventing the same user from repeatedly applying to one post, including after rejection.
+A first-come, first-served system would have been simple but unsuitable for study groups or campus activities involving several participants. I therefore allowed multiple applicants while preventing the same user from repeatedly applying to one post, including after rejection (see [ADR-0001](docs/adr-0001-concurrent-applications.md)).
 
 I also chose to manage each applicant's participation status separately instead of treating an entire post as one completed task. This allows organisers to manage participants independently.
 
@@ -62,7 +62,7 @@ These were not simply programming problems. They required decisions about how th
 
 I also learned that automated tests cannot identify requirements that were never considered. Even when tests passed, realistic user journeys could reveal missing functionality.
 
-To make TaskMate more interactive, I introduced likes and comments. During manual testing, I then noticed that post owners lacked a visible alert for new comments and applications. I addressed this by adding real-time in-app notifications, helping users respond without repeatedly checking for updates.
+I added likes and comments to make TaskMate a more interactive campus community, where students can express interest and ask questions ([c276b0d](https://github.com/comp4020-agentic-coding-studio/comp4020-final-liangsiyuan41-cyber/commit/c276b0d)). During manual testing, I found that post owners received no visible alerts for new comments or applications. I therefore introduced real-time notifications to prevent missed interactions ([bf65ba6](https://github.com/comp4020-agentic-coding-studio/comp4020-final-liangsiyuan41-cyber/commit/bf65ba6)).
 
 As a result, I developed a more structured approach to AI-assisted development: define realistic user scenarios, guide AI implementation, manually test the complete experience, and refine the system according to users' actual needs.
 

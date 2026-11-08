@@ -16,6 +16,8 @@ Posts can be free or paid. This allows students to offer practical services whil
 
 I also consider a complete user journey essential. TaskMate supports creating posts, applying to participate, accepting or declining applicants, exchanging contact information, and completing or cancelling participation. Its value depends on helping students move from an online request to a real interaction.
 
+To encourage community interaction, I added likes and public comments so students can express interest, ask questions, and communicate before applying. I also introduced in-app notifications to alert post owners to new comments and applications, reducing the chance of missed opportunities for connection.
+
 ## 3. Design Trade-offs and Privacy
 
 Students communicate in different ways, so accepted participants may voluntarily share a phone number, email address, WhatsApp, or WeChat contact. No single messaging service is compulsory.

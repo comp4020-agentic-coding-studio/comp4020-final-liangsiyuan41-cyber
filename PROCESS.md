@@ -62,6 +62,8 @@ These were not simply programming problems. They required decisions about how th
 
 I also learned that automated tests cannot identify requirements that were never considered. Even when tests passed, realistic user journeys could reveal missing functionality.
 
+To make TaskMate more interactive, I introduced likes and comments. During manual testing, I then noticed that post owners lacked a visible alert for new comments and applications. I addressed this by adding real-time in-app notifications, helping users respond without repeatedly checking for updates.
+
 As a result, I developed a more structured approach to AI-assisted development: define realistic user scenarios, guide AI implementation, manually test the complete experience, and refine the system according to users' actual needs.
 
 ## 5. Testing, Deployment, and Future Development

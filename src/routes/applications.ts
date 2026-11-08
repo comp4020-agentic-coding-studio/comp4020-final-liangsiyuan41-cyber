@@ -26,14 +26,14 @@ const getPostStmt = db.prepare("SELECT id, author_session_id FROM posts WHERE id
 // a wasted round trip for the ordinary case; the constraint is what's load
 // bearing. See docs/adr-0001-concurrent-applications.md.
 const insertApplicationStmt = db.prepare(`
-  INSERT INTO applications (post_id, applicant_session_id, applicant_name)
-  VALUES (?, ?, ?)
+  INSERT INTO applications (post_id, applicant_session_id, applicant_name, message)
+  VALUES (?, ?, ?, ?)
 `);
 
 const countApplicationsStmt = db.prepare("SELECT COUNT(*) AS n FROM applications WHERE post_id = ?");
 
 const listApplicantsStmt = db.prepare(`
-  SELECT id, applicant_name, status, cancellation_requested, cancellation_reason, created_at
+  SELECT id, applicant_name, message, status, cancellation_requested, cancellation_reason, created_at
   FROM applications
   WHERE post_id = ?
   ORDER BY created_at ASC
@@ -98,11 +98,14 @@ export async function applyToPost(
     res.end(JSON.stringify({ error: "applicantName is required" }));
     return;
   }
+  // Optional: an applicant may apply with no message at all. 1000 chars
+  // mirrors the generosity of a post's own description field above it.
+  const message = isNonEmptyString(b.message) ? b.message.trim().slice(0, 1000) : null;
 
   setDisplayName(session.id, applicantName);
 
   try {
-    insertApplicationStmt.run(postId, session.id, applicantName);
+    insertApplicationStmt.run(postId, session.id, applicantName, message);
   } catch (err) {
     // SQLITE_CONSTRAINT_UNIQUE: this session already applied to this post.
     // Multiple different students applying concurrently is allowed and
@@ -144,6 +147,7 @@ export function listApplicants(res: ServerResponse, session: Session, postId: nu
   const rows = listApplicantsStmt.all(postId) as {
     id: number;
     applicant_name: string;
+    message: string | null;
     status: ApplicationStatus;
     cancellation_requested: number;
     cancellation_reason: string | null;
@@ -156,6 +160,11 @@ export function listApplicants(res: ServerResponse, session: Session, postId: nu
       rows.map((row) => ({
         id: row.id,
         applicantName: row.applicant_name,
+        // The application message is as private as the cancellation reason
+        // just below it — visible only to the post author and the applicant
+        // who wrote it, never in the public feed. This endpoint already only
+        // returns to the author (see the ownership check above).
+        message: row.message,
         status: row.status,
         cancellationRequested: Boolean(row.cancellation_requested),
         // The reason is private to the author and that one applicant — this

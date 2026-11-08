@@ -118,3 +118,38 @@ if (!applicationColumnsAfterStatus.some((c) => c.name === "cancellation_requeste
 if (!applicationColumnsAfterStatus.some((c) => c.name === "cancellation_reason")) {
   db.exec("ALTER TABLE applications ADD COLUMN cancellation_reason TEXT");
 }
+
+// V1.1: an optional message the applicant can attach when applying (see
+// src/routes/applications.ts). A plain nullable column, added with ADD
+// COLUMN like the two above — no CHECK to widen, so no table rebuild is
+// needed here.
+const applicationColumnsAfterCancellation = db.prepare("PRAGMA table_info(applications)").all() as {
+  name: string;
+}[];
+if (!applicationColumnsAfterCancellation.some((c) => c.name === "message")) {
+  db.exec("ALTER TABLE applications ADD COLUMN message TEXT");
+}
+
+// V1.1: private contact details, exchanged only after an application is
+// accepted. One row per (application, role): each side of an accepted
+// application may optionally save its own contact method/value, and reads it
+// independently of the status rows above, so a contact save never touches
+// `applications` and never needs its own CHECK/rebuild story the way status
+// did. Kept in its own table, not columns on `applications`, because it's a
+// genuinely separate, narrower-access concern (see routes/contacts.ts): two
+// independent rows, two independent access checks, rather than two nullable
+// columns that would need the same guarding every time `applications` is
+// touched elsewhere.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS contact_details (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    application_id INTEGER NOT NULL REFERENCES applications(id),
+    role TEXT NOT NULL CHECK (role IN ('owner', 'applicant')),
+    contact_method TEXT NOT NULL CHECK (contact_method IN ('phone', 'email', 'whatsapp', 'wechat')),
+    contact_value TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    UNIQUE (application_id, role)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_contact_details_application_id ON contact_details(application_id);
+`);

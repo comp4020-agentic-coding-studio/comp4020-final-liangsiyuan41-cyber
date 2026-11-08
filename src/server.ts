@@ -6,6 +6,7 @@ import { resolveSession } from "./session.ts";
 import { addClient } from "./events.ts";
 import { listPosts, createPost } from "./routes/posts.ts";
 import { applyToPost, listApplicants, setApplicationStatus, requestCancellation } from "./routes/applications.ts";
+import { getOwnerContacts, saveOwnerContact, getApplicantContact, saveApplicantContact } from "./routes/contacts.ts";
 import { whoami } from "./routes/whoami.ts";
 import { renderReadmePage } from "./readme.ts";
 
@@ -120,6 +121,36 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
   if (cancellationMatch && req.method === "POST") {
     const session = resolveSession(req, res);
     await requestCancellation(req, res, session, Number(cancellationMatch[1]));
+    return;
+  }
+
+  // V1.1 Feature 2: private contact exchange. Two pairs of routes — one for
+  // the post author (scoped to a specific application they received), one
+  // for an applicant (scoped to their own application on this post, the same
+  // "no application id in the URL" shape requestCancellation above uses).
+  const ownerContactsMatch = pathname.match(/^\/api\/posts\/(\d+)\/contacts$/);
+  if (ownerContactsMatch && req.method === "GET") {
+    const session = resolveSession(req, res);
+    getOwnerContacts(res, session, Number(ownerContactsMatch[1]));
+    return;
+  }
+
+  const ownerContactSaveMatch = pathname.match(/^\/api\/posts\/(\d+)\/applicants\/(\d+)\/contact$/);
+  if (ownerContactSaveMatch && req.method === "PUT") {
+    const session = resolveSession(req, res);
+    await saveOwnerContact(req, res, session, Number(ownerContactSaveMatch[1]), Number(ownerContactSaveMatch[2]));
+    return;
+  }
+
+  const myContactMatch = pathname.match(/^\/api\/posts\/(\d+)\/my-contact$/);
+  if (myContactMatch && req.method === "GET") {
+    const session = resolveSession(req, res);
+    getApplicantContact(res, session, Number(myContactMatch[1]));
+    return;
+  }
+  if (myContactMatch && req.method === "PUT") {
+    const session = resolveSession(req, res);
+    await saveApplicantContact(req, res, session, Number(myContactMatch[1]));
     return;
   }
 

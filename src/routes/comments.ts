@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { db } from "../db.ts";
 import { broadcast } from "../events.ts";
+import { notifyNewComment } from "./notifications.ts";
 import { setDisplayName, type Session } from "../session.ts";
 
 // V1.2 Feature 2 (Comments): a simple, flat, public comment list per post.
@@ -37,7 +38,7 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return raw ? JSON.parse(raw) : {};
 }
 
-const getPostStmt = db.prepare("SELECT id FROM posts WHERE id = ?");
+const getPostStmt = db.prepare("SELECT id, author_session_id FROM posts WHERE id = ?");
 const insertCommentStmt = db.prepare(`
   INSERT INTO post_comments (post_id, author_session_id, author_name, message)
   VALUES (?, ?, ?, ?)
@@ -97,7 +98,7 @@ export async function createComment(
   session: Session,
   postId: number,
 ): Promise<void> {
-  const post = getPostStmt.get(postId);
+  const post = getPostStmt.get(postId) as { id: number; author_session_id: string } | undefined;
   if (!post) {
     res.writeHead(404, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ error: "post not found" }));
@@ -147,6 +148,7 @@ export async function createComment(
   // client re-fetches GET /api/posts/:id/comments, which is the public,
   // authoritative list.
   broadcast("comment:created", { postId });
+  notifyNewComment(postId, post.author_session_id, session.id, authorName);
 }
 
 // Only the comment's own author may delete it — enforced here, server-side,

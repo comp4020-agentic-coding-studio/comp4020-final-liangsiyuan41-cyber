@@ -183,3 +183,25 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_post_comments_post_id ON post_comments(post_id);
 `);
+
+// V1.2 (follow-up): in-app notifications for a post's owner — "someone
+// applied to your post" / "someone commented on your post". One row per
+// notification, addressed to a specific recipient session (never broadcast
+// content, only read by that session's own authenticated request — see
+// src/routes/notifications.ts). Purely additive, no existing table touched.
+// recipient_session_id is indexed since every read is "this session's own
+// notifications, newest first".
+db.exec(`
+  CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    recipient_session_id TEXT NOT NULL REFERENCES sessions(id),
+    type TEXT NOT NULL CHECK (type IN ('new_application', 'new_comment')),
+    post_id INTEGER NOT NULL REFERENCES posts(id),
+    application_id INTEGER REFERENCES applications(id),
+    actor_name TEXT NOT NULL,
+    is_read INTEGER NOT NULL DEFAULT 0 CHECK (is_read IN (0, 1)),
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications(recipient_session_id, created_at);
+`);

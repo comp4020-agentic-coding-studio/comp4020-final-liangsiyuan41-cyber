@@ -9,6 +9,7 @@ import { applyToPost, listApplicants, setApplicationStatus, requestCancellation 
 import { getOwnerContacts, saveOwnerContact, getApplicantContact, saveApplicantContact } from "./routes/contacts.ts";
 import { likePost, unlikePost } from "./routes/likes.ts";
 import { listComments, createComment, deleteComment } from "./routes/comments.ts";
+import { listNotifications, markNotificationRead, markAllNotificationsRead } from "./routes/notifications.ts";
 import { whoami } from "./routes/whoami.ts";
 import { renderReadmePage } from "./readme.ts";
 
@@ -188,6 +189,29 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
   if (commentDeleteMatch && req.method === "DELETE") {
     const session = resolveSession(req, res);
     deleteComment(res, session, Number(commentDeleteMatch[1]), Number(commentDeleteMatch[2]));
+    return;
+  }
+
+  // V1.2 (follow-up): notifications. Always scoped to the caller's own
+  // session — there is no postId/userId in any of these URLs for a caller
+  // to substitute someone else's into, matching /api/posts/:id/my-contact's
+  // "no id in the URL means it can only ever mean me" shape.
+  if (pathname === "/api/notifications" && req.method === "GET") {
+    const session = resolveSession(req, res);
+    listNotifications(res, session);
+    return;
+  }
+
+  const notificationReadMatch = pathname.match(/^\/api\/notifications\/(\d+)\/read$/);
+  if (notificationReadMatch && req.method === "POST") {
+    const session = resolveSession(req, res);
+    markNotificationRead(res, session, Number(notificationReadMatch[1]));
+    return;
+  }
+
+  if (pathname === "/api/notifications/read-all" && req.method === "POST") {
+    const session = resolveSession(req, res);
+    markAllNotificationsRead(res, session);
     return;
   }
 

@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { db } from "../db.ts";
 import { broadcast } from "../events.ts";
+import { notifyNewApplication } from "./notifications.ts";
 import { setDisplayName, type Session } from "../session.ts";
 
 export type ApplicationStatus = "pending" | "accepted" | "declined" | "completed" | "cancelled";
@@ -75,7 +76,7 @@ export async function applyToPost(
   session: Session,
   postId: number,
 ): Promise<void> {
-  const post = getPostStmt.get(postId);
+  const post = getPostStmt.get(postId) as { id: number; author_session_id: string } | undefined;
   if (!post) {
     res.writeHead(404, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ error: "post not found" }));
@@ -104,8 +105,10 @@ export async function applyToPost(
 
   setDisplayName(session.id, applicantName);
 
+  let applicationId: number;
   try {
-    insertApplicationStmt.run(postId, session.id, applicantName, message);
+    const result = insertApplicationStmt.run(postId, session.id, applicantName, message);
+    applicationId = result.lastInsertRowid as number;
   } catch (err) {
     // SQLITE_CONSTRAINT_UNIQUE: this session already applied to this post.
     // Multiple different students applying concurrently is allowed and
@@ -125,6 +128,7 @@ export async function applyToPost(
   res.end(JSON.stringify({ postId, applicationCount: n }));
 
   broadcast("application:count", { postId, applicationCount: n });
+  notifyNewApplication(postId, post.author_session_id, session.id, applicationId, applicantName);
 }
 
 // Only the post's author may see who applied — this is private

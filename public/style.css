@@ -115,6 +115,153 @@ textarea:focus-visible,
   color: white;
 }
 
+/* Notification bell (V1.2 follow-up): sits in the same .nav-links row as
+   Home/Explore/Create Post/My Activity, so it wraps the same way they do
+   on narrow screens rather than needing its own breakpoint rule. */
+.notification-bell-item {
+  position: relative;
+}
+
+.notification-bell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  background: none;
+  border: none;
+  border-radius: 0.4rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.notification-bell:hover {
+  background: var(--blue-tint);
+  color: var(--blue);
+}
+
+.notification-bell svg {
+  width: 1.3rem;
+  height: 1.3rem;
+}
+
+.notification-count {
+  position: absolute;
+  top: 0.1rem;
+  right: 0.1rem;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  background: #c0392b;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1.1rem;
+  text-align: center;
+}
+
+.notification-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: 20rem;
+  max-width: calc(100vw - 2rem);
+  max-height: 24rem;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 24px rgba(18, 58, 118, 0.15);
+  z-index: 20;
+}
+
+.notification-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.notification-dropdown-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--blue);
+}
+
+.notification-mark-all-read {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--blue);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.notification-mark-all-read:hover {
+  color: var(--blue-dark);
+}
+
+.notification-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.notification-item {
+  border-bottom: 1px solid var(--border);
+}
+
+.notification-item:last-child {
+  border-bottom: none;
+}
+
+.notification-item.unread {
+  background: var(--blue-tint);
+}
+
+.notification-link {
+  display: block;
+  padding: 0.65rem 1rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.notification-link:hover {
+  background: var(--bg);
+}
+
+.notification-item.unread .notification-link:hover {
+  background: #e3ebf9;
+}
+
+.notification-text {
+  margin: 0 0 0.2rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.notification-time {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.notification-empty {
+  margin: 0;
+  padding: 1.5rem 1rem;
+  text-align: center;
+  color: #777;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
 /* Hero: a wide photo banner with a navy overlay so a white heading stays
    readable regardless of what's underneath. The overlay is a gradient, not a
    flat tint, so text sits on its darkest band while the photo still reads
@@ -1166,6 +1313,24 @@ button[type="submit"]:hover,
 
   .nav-link {
     padding: 0.55rem 0.85rem;
+  }
+
+  /* On mobile .nav-links is centred (see .site-nav above), so the bell's
+     <li> no longer sits at the row's right edge — anchoring the dropdown
+     to the viewport (not that <li>) keeps it fully on-screen regardless of
+     where the bell itself lands, rather than risking it running off either
+     edge. A fixed top offset below the (variably-wrapping) sticky header
+     would be fragile, so this sits a fixed distance from the top of the
+     viewport instead, which comfortably clears the header in every layout
+     this page wraps into. */
+  .notification-dropdown {
+    position: fixed;
+    top: 4.5rem;
+    left: 1rem;
+    right: 1rem;
+    width: auto;
+    max-width: none;
+    max-height: calc(100vh - 6rem);
   }
 
   .hero {

@@ -17,6 +17,23 @@
           <li>
             <a href="/my-activity" class="nav-link">My Activity</a>
           </li>
+          <li class="notification-bell-item">
+            <button type="button" id="notification-bell" class="notification-bell" aria-haspopup="true" aria-expanded="false" aria-label="Notifications">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M6 8a6 6 0 0 1 12 0c0 4.5 1.5 6 2 7H4c.5-1 2-2.5 2-7Z" />
+                <path d="M10 19a2 2 0 0 0 4 0" />
+              </svg>
+              <span id="notification-count" class="notification-count" hidden>0</span>
+            </button>
+            <div id="notification-dropdown" class="notification-dropdown" hidden>
+              <div class="notification-dropdown-header">
+                <h3>Notifications</h3>
+                <button type="button" id="notification-mark-all-read" class="notification-mark-all-read">Mark all as read</button>
+              </div>
+              <ul id="notification-list" class="notification-list"></ul>
+              <p id="notification-empty" class="notification-empty" hidden>No notifications yet.</p>
+            </div>
+          </li>
         </ul>
       </nav>
     </header>
@@ -38,5 +55,6 @@
 
     <script src="/post-card.js"></script>
     <script src="/app.js"></script>
+    <script src="/notifications.js"></script>
   </body>
 </html>

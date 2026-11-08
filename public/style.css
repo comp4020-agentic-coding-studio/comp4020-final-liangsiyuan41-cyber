@@ -279,6 +279,51 @@ main {
   box-shadow: 0 1px 2px rgba(18, 58, 118, 0.04);
 }
 
+/* Study Together only: a quiet academic-integrity reminder, styled as an
+   information panel (tinted navy, not an alert colour) so it reads as
+   friendly context rather than a warning — present but not competing with
+   the posts panel below it. */
+.integrity-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  background: var(--blue-tint);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+}
+
+.integrity-note-icon {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.65rem;
+  background: white;
+  color: var(--blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.integrity-note-icon svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.integrity-note-title {
+  margin: 0 0 0.25rem;
+  color: var(--blue);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.integrity-note-body p:last-child {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 .panel h2 {
   margin-top: 0;
   color: var(--blue);
